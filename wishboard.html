@@ -90,7 +90,9 @@ function escapeHTML(str) {
     });
 }
 function showLogin() {
-    window.location.href = 'login.html';
+    if (!window.location.pathname.endsWith('login.html')) {
+        window.location.href = 'login.html';
+    }
 }
 function updateCurrentUser() {
     const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
@@ -105,16 +107,22 @@ document.getElementById('logoutBtn').onclick = function() {
 };
 document.getElementById('deleteDataBtn').onclick = function() {
     if (confirm('Are you sure you want to delete ALL marketplace listings for your current login? This cannot be undone.')) {
+        const deleteBtn = document.getElementById('deleteDataBtn');
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Deleting...';
         (async () => {
             const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
             const q = query(listingsRef, where('user', '==', user));
             const snapshot = await getDocs(q);
-            for (const doc of snapshot.docs) {
-                await deleteDoc(doc.ref);
+            for (const docSnap of snapshot.docs) {
+                await deleteDoc(docSnap.ref);
             }
             sessionStorage.clear();
             showLogin();
-        })();
+        })().finally(() => {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Delete All Data';
+        });
     }
 };
 let currentFilter = 'All';

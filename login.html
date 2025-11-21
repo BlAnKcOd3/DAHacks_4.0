@@ -98,16 +98,16 @@
             
             if (!username || !gmail || !password) return;
             
-            localStorage.setItem('wishboard_user', username);
-            localStorage.setItem('wishboard_id_number', idNumber);
-            localStorage.setItem('wishboard_gmail', gmail);
-            localStorage.setItem('wishboard_password', password);
-            localStorage.setItem('wishboard_device_id', getDeviceId());
+            sessionStorage.setItem('wishboard_user', username);
+            sessionStorage.setItem('wishboard_id_number', idNumber);
+            sessionStorage.setItem('wishboard_gmail', gmail);
+            sessionStorage.setItem('wishboard_password', password);
+            sessionStorage.setItem('wishboard_device_id', getDeviceId());
             window.location.href = 'wishboard.html';
         };
         
-        // Auto-redirect if already identified
-        if (localStorage.getItem('wishboard_device_id') === getDeviceId()) {
+        // Auto-redirect if already identified (session only)
+        if (sessionStorage.getItem('wishboard_device_id') === getDeviceId()) {
             window.location.href = 'wishboard.html';
         }
     </script>
