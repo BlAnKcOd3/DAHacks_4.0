@@ -39,7 +39,36 @@
         </form>
         <div class="warn">⚠️ This is NOT a secure login! Anyone using or modifying this device can access or impersonate your posts. Do NOT use for sensitive information.</div>
     </div>
-    <script>
+    <script type="module">
+        // Import Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+        // Firebase configuration (same as wishboard.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCO-w3HsDbLVbEk_J7qYEMkrpgUC_CWn54",
+            authDomain: "de-anza-marketplace.firebaseapp.com",
+            projectId: "de-anza-marketplace",
+            storageBucket: "de-anza-marketplace.firebasestorage.app",
+            messagingSenderId: "789429114794",
+            appId: "1:789429114794:web:f5240be7a6458f50c07dd3",
+            measurementId: "G-Z5NSE0RX1N"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const usersRef = collection(db, "users");
+
+        // Simple password hashing (for production, use a proper library like bcrypt on backend)
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
         function getDeviceId() {
             const data = [
                 navigator.userAgent,
@@ -72,6 +101,8 @@
         // ID number input validation
         const idInput = document.getElementById('idNumber');
         const idError = document.getElementById('idError');
+        const emailInput = document.getElementById('email');
+        const emailError = document.getElementById('emailError');
         const formError = document.getElementById('formError');
         const formSuccess = document.getElementById('formSuccess');
         
@@ -108,6 +139,11 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             
+            // Clear previous messages
+            formError.classList.remove('show');
+            formSuccess.classList.remove('show');
+            formError.textContent = '';
+            
             // Validate ID number
             if (!validateIdNumber(idNumber)) {
                 idInput.classList.add('error');
@@ -116,28 +152,66 @@
                 return;
             }
             
-            if (!username || !gmail || !password) {
+            // Validate email
+            if (!validateEmail(email)) {
+                emailInput.classList.add('error');
+                emailError.classList.add('show');
+                emailInput.focus();
+                return;
+            }
+            
+            if (!username || !email || !password) {
                 formError.textContent = 'Please fill in all fields';
                 formError.classList.add('show');
                 return;
             }
 
             const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.textContent;
             submitBtn.disabled = true;
             submitBtn.textContent = 'Processing...';
+            
+            // Safety mechanism: re-enable button after 15 seconds no matter what
+            const safetyTimeout = setTimeout(() => {
+                console.error('Safety timeout triggered - re-enabling button');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+                formError.textContent = 'Request took too long. Please check your connection and try again.';
+                formError.classList.add('show');
+            }, 15000);
+
+            // Add timeout wrapper to prevent infinite hanging
+            const withTimeout = (promise, timeoutMs) => {
+                return Promise.race([
+                    promise,
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), timeoutMs)
+                    )
+                ]);
+            };
 
             try {
+                console.log('Starting login/register process...');
+                
                 // Hash the password
+                console.log('Hashing password...');
                 const hashedPassword = await hashPassword(password);
+                console.log('Password hashed');
                 
                 // Check if user already exists (by ID number or email)
+                console.log('Querying Firestore for existing user...');
                 const idQuery = query(usersRef, where('idNumber', '==', idNumber));
-                const emailQuery = query(usersRef, where('gmail', '==', gmail));
+                const emailQuery = query(usersRef, where('email', '==', email));
                 
-                const [idSnapshot, emailSnapshot] = await Promise.all([
-                    getDocs(idQuery),
-                    getDocs(emailQuery)
-                ]);
+                // Add timeout of 10 seconds for Firestore queries
+                const [idSnapshot, emailSnapshot] = await withTimeout(
+                    Promise.all([
+                        getDocs(idQuery),
+                        getDocs(emailQuery)
+                    ]),
+                    10000
+                );
+                console.log('Firestore queries completed');
 
                 // Check if ID number is already registered
                 if (!idSnapshot.empty) {
@@ -150,34 +224,40 @@
                         localStorage.setItem('wishboard_user', username);
                         localStorage.setItem('wishboard_user_id', userDoc.id);
                         localStorage.setItem('wishboard_id_number', idNumber);
-                        localStorage.setItem('wishboard_gmail', gmail);
+                        localStorage.setItem('wishboard_email', email);
                         localStorage.setItem('wishboard_device_id', getDeviceId());
                         
                         // Update username if changed
                         if (userData.username !== username) {
-                            await setDoc(doc(db, "users", userDoc.id), {
+                            await withTimeout(setDoc(doc(db, "users", userDoc.id), {
                                 ...userData,
                                 username: username
-                            }, { merge: true });
+                            }, { merge: true }), 10000);
                         }
                         
-                        window.location.href = 'wishboard.html';
+                        clearTimeout(safetyTimeout);
+                        submitBtn.textContent = 'Success! Redirecting...';
+                        setTimeout(() => {
+                            window.location.href = 'wishboard.html';
+                        }, 500);
                         return;
                     } else {
+                        clearTimeout(safetyTimeout);
                         formError.textContent = 'Incorrect password';
                         formError.classList.add('show');
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'Login / Register';
+                        submitBtn.textContent = originalText;
                         return;
                     }
                 }
 
                 // Check if email is already registered with different ID
                 if (!emailSnapshot.empty) {
+                    clearTimeout(safetyTimeout);
                     formError.textContent = 'This email is already registered with a different ID number';
                     formError.classList.add('show');
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Login / Register';
+                    submitBtn.textContent = originalText;
                     return;
                 }
 
@@ -185,22 +265,24 @@
                 const userDoc = {
                     idNumber: idNumber,
                     username: username,
-                    gmail: gmail,
+                    email: email,
                     password: hashedPassword,
                     createdAt: Date.now()
                 };
 
-                const docRef = await addDoc(usersRef, userDoc);
+                const docRef = await withTimeout(addDoc(usersRef, userDoc), 10000);
                 
                 // Save to localStorage
                 localStorage.setItem('wishboard_user', username);
                 localStorage.setItem('wishboard_user_id', docRef.id);
                 localStorage.setItem('wishboard_id_number', idNumber);
-                localStorage.setItem('wishboard_gmail', gmail);
+                localStorage.setItem('wishboard_email', email);
                 localStorage.setItem('wishboard_device_id', getDeviceId());
                 
+                clearTimeout(safetyTimeout);
                 formSuccess.textContent = 'Registration successful! Redirecting...';
                 formSuccess.classList.add('show');
+                submitBtn.textContent = 'Success! Redirecting...';
                 
                 setTimeout(() => {
                     window.location.href = 'wishboard.html';
@@ -208,30 +290,36 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                formError.textContent = 'An error occurred. Please try again.';
+                let errorMessage = 'An error occurred. Please try again.';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.code) {
+                    // Firebase error codes
+                    switch(error.code) {
+                        case 'permission-denied':
+                            errorMessage = 'Permission denied. Please check Firestore security rules.';
+                            break;
+                        case 'unavailable':
+                            errorMessage = 'Service unavailable. Please check your internet connection.';
+                            break;
+                        case 'deadline-exceeded':
+                            errorMessage = 'Request timed out. Please try again.';
+                            break;
+                        default:
+                            errorMessage = 'Error: ' + error.code;
+                    }
+                }
+                
+                formError.textContent = errorMessage;
                 formError.classList.add('show');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Login / Register';
+                submitBtn.textContent = originalText;
+            } finally {
+                // Always clear the safety timeout
+                clearTimeout(safetyTimeout);
             }
         };
-
-        function getDeviceId() {
-            const data = [
-                navigator.userAgent,
-                navigator.language,
-                screen.width,
-                screen.height,
-                screen.colorDepth,
-                navigator.platform,
-                navigator.hardwareConcurrency
-            ].join('|');
-            let hash = 0;
-            for (let i = 0; i < data.length; i++) {
-                hash = ((hash << 5) - hash) + data.charCodeAt(i);
-                hash |= 0;
-            }
-            return 'dev-' + Math.abs(hash);
-        }
         
         // Auto-redirect if already logged in
         if (localStorage.getItem('wishboard_user_id')) {
