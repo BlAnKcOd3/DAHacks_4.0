@@ -4,9 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Firestore Project</title>
+    <script type="module" src="firebase-config.js"></script>
 </head>
 <body>
   <h1>Cloud Firestore with JavaScript</h1>
+  <nav style="margin-bottom:16px;">
+    <a href="login.html">Login</a> |
+    <a href="wishboard.html">Marketplace</a> |
+    <a href="testfile.html">Home</a>
+  </nav>
   <div>
     <h2>Add Data</h2>
     <input type="text" id="name" placeholder="Name">
@@ -18,6 +24,6 @@
     <button onclick="getData()">Get Data</button>
     <ul id="data-list"></ul>
   </div>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
