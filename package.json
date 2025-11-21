@@ -4,7 +4,8 @@
   "description": "Community Wishboard",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -13,12 +14,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/BlAnKcOd3/DAHacks_4.0/issues"
   },
   "homepage": "https://github.com/BlAnKcOd3/DAHacks_4.0#readme",
   "dependencies": {
+    "express": "^5.1.0",
     "firebase": "^12.6.0"
   }
 }
