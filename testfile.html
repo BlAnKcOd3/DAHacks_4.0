@@ -1,0 +1,112 @@
+/*
+Community Wishboard - Minimal Web App (Vanilla JS, HTML, CSS)
+Features:
+- Anonymous posting (Need/Offer)
+- LocalStorage for posts (no backend)
+- "I can help" button
+- Filter by Need/Offer
+
+To use: Save as index.html and open in browser.
+*/
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Community Wishboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; }
+        h1 { text-align: center; color: #2d6a4f; }
+        form { display: flex; gap: 8px; margin-bottom: 18px; }
+        select, input[type="text"] { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        button { background: #2d6a4f; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; }
+        button:hover { background: #40916c; }
+        .filters { margin-bottom: 16px; text-align: center; }
+        .filters button { background: #b7e4c7; color: #2d6a4f; margin: 0 4px; }
+        ul { list-style: none; padding: 0; }
+        li { background: #e9ecef; margin-bottom: 12px; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .tag { background: #ffd166; color: #6c757d; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
+        .helper { background: #06d6a0; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Community Wishboard</h1>
+        <form id="postForm">
+            <select id="type">
+                <option value="Need">Need</option>
+                <option value="Offer">Offer</option>
+            </select>
+            <input type="text" id="desc" placeholder="Describe what you're offering or looking for" required maxlength="80">
+            <button type="submit">Post</button>
+        </form>
+        <div class="filters">
+            <button onclick="filterPosts('All')">All</button>
+            <button onclick="filterPosts('Need')">Needs</button>
+            <button onclick="filterPosts('Offer')">Offers</button>
+        </div>
+        <ul id="board"></ul>
+    </div>
+    <script>
+        // Utilities
+        function getPosts() {
+            return JSON.parse(localStorage.getItem('wishboard_posts') || '[]');
+        }
+        function savePosts(posts) {
+            localStorage.setItem('wishboard_posts', JSON.stringify(posts));
+        }
+
+        // Render Board
+        let currentFilter = 'All';
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            let posts = getPosts();
+            if (currentFilter !== 'All') posts = posts.filter(p => p.type === currentFilter);
+            posts.forEach((post, idx) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>
+                        <strong>${post.type}:</strong> ${post.desc}
+                        ${post.helper ? '<span class="tag helper">Helper Found!</span>' : ''}
+                    </span>
+                    ${!post.helper ? `<button onclick="markHelp(${idx})">I can help</button>` : ''}
+                `;
+                board.appendChild(li);
+            });
+        }
+
+        // Add Post
+        document.getElementById('postForm').onsubmit = function(e) {
+            e.preventDefault();
+            const type = document.getElementById('type').value;
+            const desc = document.getElementById('desc').value.trim();
+            if (!desc) return;
+            const posts = getPosts();
+            posts.unshift({ type, desc, helper: false });
+            savePosts(posts);
+            document.getElementById('desc').value = '';
+            renderBoard();
+        };
+
+        // Mark as Helped
+        window.markHelp = function(idx) {
+            const posts = getPosts();
+            posts[idx].helper = true;
+            savePosts(posts);
+            renderBoard();
+            alert('Thanks for helping! Reach out locally.');
+        };
+
+        // Filter
+        window.filterPosts = function(type) {
+            currentFilter = type;
+            renderBoard();
+        };
+
+        // Initial render
+        renderBoard();
+    </script>
+</body>
+</html>
