@@ -104,20 +104,24 @@ function showLogin() {
     }
 }
 function updateCurrentUser() {
-    const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
+    const user = localStorage.getItem('wishboard_user') || '(unknown)';
     document.getElementById('currentUser').textContent = 'User: ' + user;
 }
 document.getElementById('changeUserBtn').onclick = function() {
     // Show a prompt to change the user's name
-    const currentName = sessionStorage.getItem('wishboard_user') || '';
+    const currentName = localStorage.getItem('wishboard_user') || '';
     const newName = prompt('Enter your new name:', currentName);
     if (newName && newName.trim() && newName !== currentName) {
-        sessionStorage.setItem('wishboard_user', newName.trim());
+        localStorage.setItem('wishboard_user', newName.trim());
         updateCurrentUser();
     }
 };
 document.getElementById('logoutBtn').onclick = function() {
-    sessionStorage.clear();
+    localStorage.removeItem('wishboard_user');
+    localStorage.removeItem('wishboard_user_id');
+    localStorage.removeItem('wishboard_id_number');
+    localStorage.removeItem('wishboard_email');
+    localStorage.removeItem('wishboard_device_id');
     showLogin();
 };
 document.getElementById('deleteDataBtn').onclick = function() {
@@ -126,13 +130,17 @@ document.getElementById('deleteDataBtn').onclick = function() {
         deleteBtn.disabled = true;
         deleteBtn.textContent = 'Deleting...';
         (async () => {
-            const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
+            const user = localStorage.getItem('wishboard_user') || '(unknown)';
             const q = query(listingsRef, where('user', '==', user));
             const snapshot = await getDocs(q);
             for (const docSnap of snapshot.docs) {
                 await deleteDoc(docSnap.ref);
             }
-            sessionStorage.clear();
+            localStorage.removeItem('wishboard_user');
+            localStorage.removeItem('wishboard_user_id');
+            localStorage.removeItem('wishboard_id_number');
+            localStorage.removeItem('wishboard_email');
+            localStorage.removeItem('wishboard_device_id');
             showLogin();
         })().finally(() => {
             deleteBtn.disabled = false;
@@ -189,7 +197,7 @@ document.getElementById('postForm').onsubmit = async function(e) {
     const desc = document.getElementById('desc').value.trim();
     const contact = document.getElementById('contact').value.trim();
     if (!title || !desc) return;
-    const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
+    const user = localStorage.getItem('wishboard_user') || '(unknown)';
     await addDoc(listingsRef, {
         title, price, category, desc, contact, user,
         created: Date.now()
@@ -203,7 +211,11 @@ window.filterPosts = function(type) {
     currentFilter = type;
     // Board will auto-update via Firestore listener
 };
-if (!sessionStorage.getItem('wishboard_user')) {
+// Check if user is logged in (using localStorage to match login.html)
+// Check for wishboard_user_id first (set by login.html), then fallback to wishboard_user
+const userId = localStorage.getItem('wishboard_user_id');
+const userName = localStorage.getItem('wishboard_user');
+if (!userId && !userName) {
     showLogin();
 } else {
     updateCurrentUser();
