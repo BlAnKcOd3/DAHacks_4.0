@@ -73,6 +73,13 @@
         </div>
         <form id="postForm">
             <input type="text" id="title" placeholder="Item Title" required maxlength="40">
+            <!-- Password Section Start -->
+            <input type="password" id="password" placeholder="Enter password" maxlength="40" style="margin-bottom:8px;">
+            <input type="password" id="confirmPassword" placeholder="Confirm password" maxlength="40" style="margin-bottom:8px;">
+            <div id="reenterPasswordSection" style="display:none; flex-direction:column; gap:8px;">
+                <input type="password" id="reenterPassword" placeholder="Re-enter password" maxlength="40" style="margin-bottom:8px;">
+            </div>
+            <!-- Password Section End -->
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <span style="color: #2d6a4f; font-weight: bold;">USD ($)</span>
@@ -117,6 +124,26 @@
     </div>
     <script type="module" src="app.js"></script>
     <script type="module">
+// Password re-entry logic
+const confirmPasswordInput = document.getElementById('confirmPassword');
+const reenterSection = document.getElementById('reenterPasswordSection');
+if (confirmPasswordInput && reenterSection) {
+    function showReenter() {
+        reenterSection.style.display = 'flex';
+        document.getElementById('reenterPassword').focus();
+    }
+    confirmPasswordInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            showReenter();
+        }
+    });
+    confirmPasswordInput.addEventListener('blur', function() {
+        if (confirmPasswordInput.value) {
+            showReenter();
+        }
+    });
+}
 // Login button always visible, redirects to login page
 document.getElementById('loginBtn').onclick = function() {
     window.location.href = 'login.html';
