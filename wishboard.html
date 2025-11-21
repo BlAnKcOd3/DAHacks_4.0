@@ -1,3 +1,4 @@
+<!--
 // Depop-style price input: right-to-left entry
 const priceInput = document.getElementById('price');
 if (priceInput) {
@@ -28,8 +29,8 @@ if (priceInput) {
     });
     priceInput.addEventListener('blur', function() {
         if (!priceInput.value) priceInput.value = '0.00';
-    });
-}
+    })
+} -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,7 +119,7 @@ if (priceInput) {
                     <span id="pricePlaceholder" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#888; font-size:1em; pointer-events:none; z-index:1; font-family:inherit;">0.00</span>
                     <span id="priceOverlay" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#2d6a4f; font-size:1em; pointer-events:none; z-index:3; font-family:inherit;"></span>
                 </div>
-            // Depop-style price input with left-aligned disappearing placeholder
+            <!--// Depop-style price input with left-aligned disappearing placeholder
             const priceInput = document.getElementById('price');
             const pricePlaceholder = document.getElementById('pricePlaceholder');
             const priceOverlay = document.getElementById('priceOverlay');
@@ -177,7 +178,7 @@ if (priceInput) {
                     updatePriceDisplay();
                 });
                 updatePriceDisplay();
-            }
+            }!-->
             </div>
             <div class="negotiable-option">
                 <input type="checkbox" id="negotiable" name="negotiable">
