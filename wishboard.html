@@ -66,122 +66,133 @@
         </div>
         <ul id="board"></ul>
     </div>
-    <script>
-        // Simple HTML escape utility
-        function escapeHTML(str) {
-            return String(str).replace(/[&<>'"`=]/g, function(s) {
-                return ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;','`':'&#96;','=':'&#61;'}[s]);
-            });
-        }
-        // Utilities
-        function getPosts() {
-            return JSON.parse(localStorage.getItem('wishboard_posts') || '[]');
-        }
-        function savePosts(posts) {
-            localStorage.setItem('wishboard_posts', JSON.stringify(posts));
-        }
-        function getDeviceId() {
-            const data = [
-                navigator.userAgent,
-                navigator.language,
-                screen.width,
-                screen.height,
-                screen.colorDepth,
-                navigator.platform,
-                navigator.hardwareConcurrency
-            ].join('|');
-            let hash = 0;
-            for (let i = 0; i < data.length; i++) {
-                hash = ((hash << 5) - hash) + data.charCodeAt(i);
-                hash |= 0;
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCO-w3HsDbLVbEk_J7qYEMkrpgUC_CWn54",
+  authDomain: "de-anza-marketplace.firebaseapp.com",
+  projectId: "de-anza-marketplace",
+  storageBucket: "de-anza-marketplace.firebasestorage.app",
+  messagingSenderId: "789429114794",
+  appId: "1:789429114794:web:f5240be7a6458f50c07dd3",
+  measurementId: "G-Z5NSE0RX1N"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const listingsRef = collection(db, "listings");
+
+function escapeHTML(str) {
+    return String(str).replace(/[&<>'"`=]/g, function(s) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;','`':'&#96;','=':'&#61;'}[s]);
+    });
+}
+function showLogin() {
+    if (!window.location.pathname.endsWith('login.html')) {
+        window.location.href = 'login.html';
+    }
+}
+function updateCurrentUser() {
+    const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
+    document.getElementById('currentUser').textContent = 'User: ' + user;
+}
+document.getElementById('changeUserBtn').onclick = function() {
+    showLogin();
+};
+document.getElementById('logoutBtn').onclick = function() {
+    sessionStorage.clear();
+    showLogin();
+};
+document.getElementById('deleteDataBtn').onclick = function() {
+    if (confirm('Are you sure you want to delete ALL marketplace listings for your current login? This cannot be undone.')) {
+        const deleteBtn = document.getElementById('deleteDataBtn');
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Deleting...';
+        (async () => {
+            const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
+            const q = query(listingsRef, where('user', '==', user));
+            const snapshot = await getDocs(q);
+            for (const docSnap of snapshot.docs) {
+                await deleteDoc(docSnap.ref);
             }
-            return 'dev-' + Math.abs(hash);
-        }
-        function isDeviceIdentified() {
-            return localStorage.getItem('wishboard_device_id') === getDeviceId();
-        }
-        function showLogin() {
-            window.location.href = 'login.html';
-        }
-        function updateCurrentUser() {
-            const user = localStorage.getItem('wishboard_user') || '(unknown)';
-            document.getElementById('currentUser').textContent = 'Device Name: ' + user;
-        }
-        document.getElementById('changeUserBtn').onclick = function() {
+            sessionStorage.clear();
             showLogin();
-        };
-        document.getElementById('logoutBtn').onclick = function() {
-            localStorage.removeItem('wishboard_user');
-            localStorage.removeItem('wishboard_device_id');
-            showLogin();
-        };
-        document.getElementById('deleteDataBtn').onclick = function() {
-            if (confirm('Are you sure you want to delete ALL wishboard data for this device? This cannot be undone.')) {
-                localStorage.removeItem('wishboard_posts');
-                localStorage.removeItem('wishboard_user');
-                localStorage.removeItem('wishboard_device_id');
-                showLogin();
-            }
-        };
-        // Render Board
-        let currentFilter = 'All';
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            let posts = getPosts();
-            if (currentFilter !== 'All') posts = posts.filter(p => p.category === currentFilter);
-            posts.forEach((post, idx) => {
-                const li = document.createElement('li');
-                const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
-                const safeTitle = escapeHTML(post.title || 'Untitled');
-                const safeDesc = escapeHTML(post.desc || '');
-                const safeCategory = escapeHTML(post.category || 'Other');
-                const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
-                const safeContact = escapeHTML(post.contact || '');
-                li.innerHTML = `
-                    <div class="listing-header">${safeTitle} <span class="category">${safeCategory}</span></div>
-                    <div class="listing-details">${safeDesc}</div>
-                    <div><strong>Price:</strong> ${safePrice}</div>
-                    <div><strong>Seller:</strong> ${safeUser}</div>
-                    ${safeContact ? `<button onclick=\"showContact('${safeContact}')\" class=\"contact\">Contact Seller</button>` : ''}
-                `;
-                board.appendChild(li);
+        })().finally(() => {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Delete All Data';
+        });
+    }
+};
+let currentFilter = 'All';
+function renderBoard(posts) {
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    let filtered = posts;
+    if (currentFilter !== 'All') filtered = posts.filter(p => p.category === currentFilter);
+    filtered.forEach((post, idx) => {
+        const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
+        const safeTitle = escapeHTML(post.title || 'Untitled');
+        const safeDesc = escapeHTML(post.desc || '');
+        const safeCategory = escapeHTML(post.category || 'Other');
+        const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
+        const safeContact = escapeHTML(post.contact || '');
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="listing-header">${safeTitle} <span class="category">${safeCategory}</span></div>
+            <div class="listing-details">${safeDesc}</div>
+            <div><strong>Price:</strong> ${safePrice}</div>
+            <div><strong>Seller:</strong> ${safeUser}</div>
+        `;
+        if (safeContact) {
+            const btn = document.createElement('button');
+            btn.className = 'contact';
+            btn.textContent = 'Contact Seller';
+            btn.addEventListener('click', function() {
+                alert('Contact Info: ' + safeContact);
             });
+            li.appendChild(btn);
         }
-        window.showContact = function(contact) {
-            alert('Contact Info: ' + contact);
-        };
-        // Add Post
-        document.getElementById('postForm').onsubmit = function(e) {
-            e.preventDefault();
-            const title = document.getElementById('title').value.trim();
-            const price = document.getElementById('price').value.trim();
-            const category = document.getElementById('category').value;
-            const desc = document.getElementById('desc').value.trim();
-            const contact = document.getElementById('contact').value.trim();
-            if (!title || !desc) return;
-            const user = localStorage.getItem('wishboard_user') || '(unknown)';
-            const posts = getPosts();
-            posts.unshift({ title, price, category, desc, contact, user });
-            savePosts(posts);
-            document.getElementById('title').value = '';
-            document.getElementById('price').value = '';
-            document.getElementById('desc').value = '';
-            document.getElementById('contact').value = '';
-            renderBoard();
-        };
-        // Filter
-        window.filterPosts = function(type) {
-            currentFilter = type;
-            renderBoard();
-        };
-        // Initial render
-        if (!isDeviceIdentified()) {
-            showLogin();
-        } else {
-            updateCurrentUser();
-            renderBoard();
-        }
-    </script>
+        board.appendChild(li);
+    });
+}
+// Listen for Firestore changes
+const q = query(listingsRef, orderBy("created", "desc"));
+onSnapshot(q, (snapshot) => {
+    const posts = [];
+    snapshot.forEach(doc => {
+        posts.push(doc.data());
+    });
+    renderBoard(posts);
+});
+document.getElementById('postForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const title = document.getElementById('title').value.trim();
+    const price = document.getElementById('price').value.trim();
+    const category = document.getElementById('category').value;
+    const desc = document.getElementById('desc').value.trim();
+    const contact = document.getElementById('contact').value.trim();
+    if (!title || !desc) return;
+    const user = sessionStorage.getItem('wishboard_user') || '(unknown)';
+    await addDoc(listingsRef, {
+        title, price, category, desc, contact, user,
+        created: Date.now()
+    });
+    document.getElementById('title').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('desc').value = '';
+    document.getElementById('contact').value = '';
+};
+window.filterPosts = function(type) {
+    currentFilter = type;
+    // Board will auto-update via Firestore listener
+};
+if (!sessionStorage.getItem('wishboard_user')) {
+    showLogin();
+} else {
+    updateCurrentUser();
+}
+</script>
 </body>
 </html>
