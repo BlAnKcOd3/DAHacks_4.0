@@ -99,7 +99,13 @@ function updateCurrentUser() {
     document.getElementById('currentUser').textContent = 'User: ' + user;
 }
 document.getElementById('changeUserBtn').onclick = function() {
-    showLogin();
+    // Show a prompt to change the user's name
+    const currentName = sessionStorage.getItem('wishboard_user') || '';
+    const newName = prompt('Enter your new name:', currentName);
+    if (newName && newName.trim() && newName !== currentName) {
+        sessionStorage.setItem('wishboard_user', newName.trim());
+        updateCurrentUser();
+    }
 };
 document.getElementById('logoutBtn').onclick = function() {
     sessionStorage.clear();
