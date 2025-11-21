@@ -66,163 +66,7 @@
         </div>
         <ul id="board"></ul>
     </div>
-        <script type="module">
-            // Import the functions you need from the SDKs you need
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-            import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
-            // TODO: Add SDKs for Firebase products that you want to use
-            // https://firebase.google.com/docs/web/setup#available-libraries
-
-            // Your web app's Firebase configuration
-            // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-            const firebaseConfig = {
-                apiKey: "AIzaSyCO-w3HsDbLVbEk_J7qYEMkrpgUC_CWn54",
-                authDomain: "de-anza-marketplace.firebaseapp.com",
-                projectId: "de-anza-marketplace",
-                storageBucket: "de-anza-marketplace.firebasestorage.app",
-                messagingSenderId: "789429114794",
-                appId: "1:789429114794:web:f5240be7a6458f50c07dd3",
-                measurementId: "G-Z5NSE0RX1N"
-            };
-
-            // Initialize Firebase
-            const app = initializeApp(firebaseConfig);
-            const analytics = getAnalytics(app);
-            // Firestore integration
-            import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-            const db = getFirestore(app);
-
-            // Utilities
-            function getDeviceId() {
-                const data = [
-                    navigator.userAgent,
-                    navigator.language,
-                    screen.width,
-                    screen.height,
-                    screen.colorDepth,
-                    navigator.platform,
-                    navigator.hardwareConcurrency
-                ].join('|');
-                let hash = 0;
-                for (let i = 0; i < data.length; i++) {
-                    hash = ((hash << 5) - hash) + data.charCodeAt(i);
-                    hash |= 0;
-                }
-                return 'dev-' + Math.abs(hash);
-            }
-            function isDeviceIdentified() {
-                return localStorage.getItem('wishboard_device_id') === getDeviceId();
-            }
-            function showLogin() {
-                window.location.href = 'login.html';
-            }
-            function updateCurrentUser() {
-                const user = localStorage.getItem('wishboard_user') || '(unknown)';
-                document.getElementById('currentUser').textContent = 'Device Name: ' + user;
-            }
-            document.getElementById('changeUserBtn').onclick = function() {
-                showLogin();
-            };
-            document.getElementById('logoutBtn').onclick = function() {
-                localStorage.removeItem('wishboard_user');
-                localStorage.removeItem('wishboard_device_id');
-                showLogin();
-            };
-            const deleteBtn = document.getElementById('deleteDataBtn');
-            deleteBtn.onclick = function() {
-                if (confirm('Are you sure you want to delete ALL marketplace listings for your current name and device info? This cannot be undone.')) {
-                    (async () => {
-                        const user = localStorage.getItem('wishboard_user') || '(unknown)';
-                        const listingsQuery = query(listingsRef, where('user', '==', user));
-                        const snapshot = await getDocs(listingsQuery);
-                        for (const doc of snapshot.docs) {
-                            await deleteDoc(doc.ref);
-                        }
-                        localStorage.removeItem('wishboard_user');
-                        localStorage.removeItem('wishboard_device_id');
-                        showLogin();
-                    })();
-                }
-            };
-
-            // Firestore: Listen for listings and render board
-            let currentFilter = 'All';
-            function renderBoard(posts) {
-                const board = document.getElementById('board');
-                board.innerHTML = '';
-                let filtered = posts;
-                if (currentFilter !== 'All') filtered = posts.filter(p => p.category === currentFilter);
-                filtered.forEach((post, idx) => {
-                    const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
-                    const safeTitle = escapeHTML(post.title || 'Untitled');
-                    const safeDesc = escapeHTML(post.desc || '');
-                    const safeCategory = escapeHTML(post.category || 'Other');
-                    const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
-                    const safeContact = escapeHTML(post.contact || '');
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <div class="listing-header">${safeTitle} <span class="category">${safeCategory}</span></div>
-                        <div class="listing-details">${safeDesc}</div>
-                        <div><strong>Price:</strong> ${safePrice}</div>
-                        <div><strong>Seller:</strong> ${safeUser}</div>
-                    `;
-                    if (safeContact) {
-                        const btn = document.createElement('button');
-                        btn.className = 'contact';
-                        btn.textContent = 'Contact Seller';
-                        btn.addEventListener('click', function() {
-                            alert('Contact Info: ' + safeContact);
-                        });
-                        li.appendChild(btn);
-                    }
-                    board.appendChild(li);
-                });
-            }
-
-            // Listen for Firestore changes
-            const listingsRef = collection(db, "listings");
-            const q = query(listingsRef, orderBy("created", "desc"));
-            onSnapshot(q, (snapshot) => {
-                const posts = [];
-                snapshot.forEach(doc => {
-                    posts.push(doc.data());
-                });
-                renderBoard(posts);
-            });
-
-            // Add Post
-            document.getElementById('postForm').onsubmit = async function(e) {
-                e.preventDefault();
-                const title = document.getElementById('title').value.trim();
-                const price = document.getElementById('price').value.trim();
-                const category = document.getElementById('category').value;
-                const desc = document.getElementById('desc').value.trim();
-                const contact = document.getElementById('contact').value.trim();
-                if (!title || !desc) return;
-                const user = localStorage.getItem('wishboard_user') || '(unknown)';
-                await addDoc(listingsRef, {
-                    title, price, category, desc, contact, user,
-                    created: Date.now()
-                });
-                document.getElementById('title').value = '';
-                document.getElementById('price').value = '';
-                document.getElementById('desc').value = '';
-                document.getElementById('contact').value = '';
-            };
-
-            // Filter
-            window.filterPosts = function(type) {
-                currentFilter = type;
-                // Board will auto-update via Firestore listener
-            };
-
-            // Initial render
-            if (!isDeviceIdentified()) {
-                showLogin();
-            } else {
-                updateCurrentUser();
-            }
-        </script>
+    <script>
         // Simple HTML escape utility
         function escapeHTML(str) {
             return String(str).replace(/[&<>'"`=]/g, function(s) {
@@ -272,21 +116,12 @@
             showLogin();
         };
         document.getElementById('deleteDataBtn').onclick = function() {
-                if (confirm('Are you sure you want to delete ALL marketplace listings for your current name and device info? This cannot be undone.')) {
-                    // Remove user's listings from Firestore
-                    import { where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-                    (async () => {
-                        const user = localStorage.getItem('wishboard_user') || '(unknown)';
-                        const listingsQuery = query(listingsRef, where('user', '==', user));
-                        const snapshot = await getDocs(listingsQuery);
-                        for (const doc of snapshot.docs) {
-                            await deleteDoc(doc.ref);
-                        }
-                        localStorage.removeItem('wishboard_user');
-                        localStorage.removeItem('wishboard_device_id');
-                        showLogin();
-                    })();
-                }
+            if (confirm('Are you sure you want to delete ALL wishboard data for this device? This cannot be undone.')) {
+                localStorage.removeItem('wishboard_posts');
+                localStorage.removeItem('wishboard_user');
+                localStorage.removeItem('wishboard_device_id');
+                showLogin();
+            }
         };
         // Render Board
         let currentFilter = 'All';
@@ -308,7 +143,7 @@
                     <div class="listing-details">${safeDesc}</div>
                     <div><strong>Price:</strong> ${safePrice}</div>
                     <div><strong>Seller:</strong> ${safeUser}</div>
-                    ${safeContact ? `<button onclick="showContact('${safeContact}')" class="contact">Contact Seller</button>` : ''}
+                    ${safeContact ? `<button onclick=\"showContact('${safeContact}')\" class=\"contact\">Contact Seller</button>` : ''}
                 `;
                 board.appendChild(li);
             });
