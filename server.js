@@ -2,6 +2,15 @@ import express from 'express'
 const app = express()
 const port = 3000
 
+const serviceAccount = require('./path/to/serviceAccountKey.json');
+
+initializeApp({
+  credential: cert(serviceAccount)
+});
+
+const db = getFirestore();
+
+
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
