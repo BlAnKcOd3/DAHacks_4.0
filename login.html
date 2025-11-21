@@ -62,6 +62,7 @@
                 <input type="email" id="registerEmail" placeholder="Enter your email address" required>
                 <div class="error-msg" id="registerEmailError">Please enter a valid email address</div>
                 <input type="password" id="registerPassword" placeholder="Enter your password" required>
+                <div class="error-msg" id="registerPasswordError">Passwords do not match</div>
                 <div class="error-msg" id="registerFormError"></div>
                 <div class="success-msg" id="registerFormSuccess"></div>
                 <button type="submit" id="registerSubmitBtn">Register</button>
@@ -165,8 +166,13 @@
         const registerPasswordInput = document.getElementById('registerPassword');
         const registerIdError = document.getElementById('registerIdError');
         const registerEmailError = document.getElementById('registerEmailError');
+        const registerPasswordError = document.getElementById('registerPasswordError');
         const registerFormError = document.getElementById('registerFormError');
         const registerFormSuccess = document.getElementById('registerFormSuccess');
+        
+        // Track if password is confirmed
+        let passwordConfirmed = false;
+        let originalPassword = '';
         
         // Login ID number validation
         loginIdInput.addEventListener('input', function(e) {
@@ -215,6 +221,74 @@
             } else {
                 registerEmailInput.classList.remove('error');
                 registerEmailError.classList.remove('show');
+            }
+        });
+        
+        // Reset password confirmation when password changes
+        registerPasswordInput.addEventListener('input', function(e) {
+            passwordConfirmed = false;
+            registerPasswordInput.classList.remove('error');
+            registerPasswordError.classList.remove('show');
+        });
+        
+        // Password confirmation on blur (ONLY for register form)
+        registerPasswordInput.addEventListener('blur', function(e) {
+            // Double-check we're in the register form (not login)
+            if (e.target.id !== 'registerPassword') {
+                return;
+            }
+            
+            const password = e.target.value;
+            
+            // Only prompt if password is not empty and not already confirmed
+            if (password.length > 0 && !passwordConfirmed) {
+                originalPassword = password;
+                
+                // Prompt user to re-enter password (ONLY for registration)
+                const confirmPassword = prompt('Please re-enter your password to confirm:');
+                
+                if (confirmPassword === null) {
+                    // User cancelled - clear the password field
+                    registerPasswordInput.value = '';
+                    registerPasswordInput.classList.remove('error');
+                    registerPasswordError.classList.remove('show');
+                    passwordConfirmed = false;
+                    return;
+                }
+                
+                // Compare passwords character by character
+                if (password.length !== confirmPassword.length) {
+                    // Different lengths - definitely don't match
+                    registerPasswordInput.classList.add('error');
+                    registerPasswordError.classList.add('show');
+                    registerPasswordInput.value = '';
+                    passwordConfirmed = false;
+                    alert('Passwords do not match. Please try again.');
+                    return;
+                }
+                
+                // Compare character by character
+                let matches = true;
+                for (let i = 0; i < password.length; i++) {
+                    if (password[i] !== confirmPassword[i]) {
+                        matches = false;
+                        break;
+                    }
+                }
+                
+                if (matches) {
+                    // Passwords match
+                    registerPasswordInput.classList.remove('error');
+                    registerPasswordError.classList.remove('show');
+                    passwordConfirmed = true;
+                } else {
+                    // Passwords don't match
+                    registerPasswordInput.classList.add('error');
+                    registerPasswordError.classList.add('show');
+                    registerPasswordInput.value = '';
+                    passwordConfirmed = false;
+                    alert('Passwords do not match. Please try again.');
+                }
             }
         });
 
@@ -437,6 +511,14 @@
             if (!username || !email || !password) {
                 registerFormError.textContent = 'Please fill in all fields';
                 registerFormError.classList.add('show');
+                return;
+            }
+            
+            // Check if password was confirmed
+            if (!passwordConfirmed) {
+                registerFormError.textContent = 'Please confirm your password by clicking off the password field';
+                registerFormError.classList.add('show');
+                registerPasswordInput.focus();
                 return;
             }
 
