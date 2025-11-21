@@ -122,6 +122,9 @@ document.getElementById('logoutBtn').onclick = function() {
     localStorage.removeItem('wishboard_id_number');
     localStorage.removeItem('wishboard_email');
     localStorage.removeItem('wishboard_device_id');
+    // Show login button again
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) loginBtn.style.display = 'block';
     showLogin();
 };
 document.getElementById('deleteDataBtn').onclick = function() {
@@ -215,9 +218,15 @@ window.filterPosts = function(type) {
 // Check for wishboard_user_id first (set by login.html), then fallback to wishboard_user
 const userId = localStorage.getItem('wishboard_user_id');
 const userName = localStorage.getItem('wishboard_user');
+const loginBtn = document.getElementById('loginBtn');
+
 if (!userId && !userName) {
+    // User not logged in - show login button
+    if (loginBtn) loginBtn.style.display = 'block';
     showLogin();
 } else {
+    // User is logged in - hide login button
+    if (loginBtn) loginBtn.style.display = 'none';
     updateCurrentUser();
 }
 </script>
