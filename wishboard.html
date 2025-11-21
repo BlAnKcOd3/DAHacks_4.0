@@ -1,4 +1,35 @@
-<!-- ...existing HTML... -->
+// Depop-style price input: right-to-left entry
+const priceInput = document.getElementById('price');
+if (priceInput) {
+    let priceValue = '';
+    priceInput.addEventListener('keydown', function(e) {
+        // Allow navigation keys
+        if (["ArrowLeft","ArrowRight","Tab"].includes(e.key)) return;
+        // Prevent default for all but numbers and backspace
+        if (!/^[0-9]$/.test(e.key) && e.key !== 'Backspace') {
+            e.preventDefault();
+            return;
+        }
+        e.preventDefault();
+        if (/^[0-9]$/.test(e.key)) {
+            // Add digit to left
+            priceValue = priceValue + e.key;
+        } else if (e.key === 'Backspace') {
+            // Remove last digit
+            priceValue = priceValue.slice(0, -1);
+        }
+        // Format as cents
+        let num = priceValue ? parseInt(priceValue, 10) : 0;
+        let formatted = (num / 100).toFixed(2);
+        priceInput.value = formatted;
+    });
+    priceInput.addEventListener('focus', function() {
+        priceInput.select();
+    });
+    priceInput.addEventListener('blur', function() {
+        if (!priceInput.value) priceInput.value = '0.00';
+    });
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -87,7 +118,7 @@
                     <span id="pricePlaceholder" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#888; font-size:1em; pointer-events:none; z-index:1; font-family:inherit;">0.00</span>
                     <span id="priceOverlay" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#2d6a4f; font-size:1em; pointer-events:none; z-index:3; font-family:inherit;"></span>
                 </div>
-            // Depop-style price input with left-aligned disappearing placeholder
+            <!--// Depop-style price input with left-aligned disappearing placeholder
             const priceInput = document.getElementById('price');
             const pricePlaceholder = document.getElementById('pricePlaceholder');
             const priceOverlay = document.getElementById('priceOverlay');
@@ -146,7 +177,7 @@
                     updatePriceDisplay();
                 });
                 updatePriceDisplay();
-            }
+            }!-->
             </div>
             <div class="negotiable-option">
                 <input type="checkbox" id="negotiable" name="negotiable">
