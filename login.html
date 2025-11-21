@@ -31,78 +31,45 @@
         </form>
         <div class="warn">⚠️ This is NOT a secure login! Anyone using or modifying this device can access or impersonate your posts. Do NOT use for sensitive information.</div>
     </div>
-    <script>
-        function getDeviceId() {
-            const data = [
-                navigator.userAgent,
-                navigator.language,
-                screen.width,
-                screen.height,
-                screen.colorDepth,
-                navigator.platform,
-                navigator.hardwareConcurrency
-            ].join('|');
-            let hash = 0;
-            for (let i = 0; i < data.length; i++) {
-                hash = ((hash << 5) - hash) + data.charCodeAt(i);
-                hash |= 0;
-            }
-            return 'dev-' + Math.abs(hash);
-        }
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-        // Validate ID number
-        function validateIdNumber(idNumber) {
-            const idRegex = /^[0-9]{8}$/;
-            return idRegex.test(idNumber);
-        }
+        const firebaseConfig = {
+          apiKey: "AIzaSyCO-w3HsDbLVbEk_J7qYEMkrpgUC_CWn54",
+          authDomain: "de-anza-marketplace.firebaseapp.com",
+          projectId: "de-anza-marketplace",
+          storageBucket: "de-anza-marketplace.firebasestorage.app",
+          messagingSenderId: "789429114794",
+          appId: "1:789429114794:web:f5240be7a6458f50c07dd3",
+          measurementId: "G-Z5NSE0RX1N"
+        };
 
-        // ID number input validation
-        const idInput = document.getElementById('idNumber');
-        const idError = document.getElementById('idError');
-        
-        idInput.addEventListener('input', function(e) {
-            const value = e.target.value;
-            // Only allow numbers
-            e.target.value = value.replace(/[^0-9]/g, '');
-            
-            if (e.target.value.length > 0 && !validateIdNumber(e.target.value)) {
-                idInput.classList.add('error');
-                idError.classList.add('show');
-            } else {
-                idInput.classList.remove('error');
-                idError.classList.remove('show');
-            }
-        });
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const usersRef = collection(db, "users");
 
-        document.getElementById('deviceIdForm').onsubmit = function(e) {
+        document.getElementById('deviceIdForm').onsubmit = async function(e) {
             e.preventDefault();
             const idNumber = document.getElementById('idNumber').value.trim();
             const username = document.getElementById('username').value.trim();
             const gmail = document.getElementById('gmail').value.trim();
             const password = document.getElementById('password').value;
-            
-            // Validate ID number
-            if (!validateIdNumber(idNumber)) {
-                idInput.classList.add('error');
-                idError.classList.add('show');
-                idInput.focus();
-                return;
+            if (!idNumber || !username || !gmail || !password) return;
+            // Check if user exists
+            const q = query(usersRef, where('idNumber', '==', idNumber));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+                // New user, add to Firestore
+                await addDoc(usersRef, { idNumber, username, gmail, password });
             }
-            
-            if (!username || !gmail || !password) return;
-            
-            localStorage.setItem('wishboard_user', username);
-            localStorage.setItem('wishboard_id_number', idNumber);
-            localStorage.setItem('wishboard_gmail', gmail);
-            localStorage.setItem('wishboard_password', password);
-            localStorage.setItem('wishboard_device_id', getDeviceId());
+            // Store login info in sessionStorage for this session only
+            sessionStorage.setItem('wishboard_user', username);
+            sessionStorage.setItem('wishboard_id_number', idNumber);
+            sessionStorage.setItem('wishboard_gmail', gmail);
+            sessionStorage.setItem('wishboard_password', password);
             window.location.href = 'wishboard.html';
         };
-        
-        // Auto-redirect if already identified
-        if (localStorage.getItem('wishboard_device_id') === getDeviceId()) {
-            window.location.href = 'wishboard.html';
-        }
     </script>
 </body>
 </html>
