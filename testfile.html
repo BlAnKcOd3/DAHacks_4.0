@@ -31,8 +31,21 @@ To use: Save as index.html and open in browser.
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="deviceIdContainer">
+        <h1>Device Identification</h1>
+        <form id="deviceIdForm">
+            <input type="text" id="username" placeholder="Enter your name (for this device)" required maxlength="32" style="flex:1; margin-bottom:12px;">
+            <button type="submit">Continue</button>
+        </form>
+        <p style="color:#d90429; font-size:1em; font-weight:bold; margin-top:8px;">⚠️ This is NOT a secure login! Your name is only saved for this browser/device. Anyone using or modifying this device can access or impersonate your posts. Do NOT use for sensitive information.</p>
+    </div>
+    <div class="container" id="wishboardContainer" style="display:none;">
         <h1>Community Wishboard</h1>
+        <div id="leaderboard" style="margin-bottom:18px; text-align:center;"></div>
+        <div style="margin-bottom:12px; text-align:center;">
+            <span id="currentUser" style="color:#2d6a4f; font-weight:bold;"></span>
+            <button id="changeUserBtn" style="margin-left:8px; background:#ffd166; color:#2d6a4f; border:none; border-radius:4px; padding:4px 10px; cursor:pointer; font-size:0.95em;">Change Name</button>
+        </div>
         <form id="postForm">
             <select id="type">
                 <option value="Need">Need</option>
@@ -49,6 +62,12 @@ To use: Save as index.html and open in browser.
         <ul id="board"></ul>
     </div>
     <script>
+                // Simple HTML escape utility
+                function escapeHTML(str) {
+                    return String(str).replace(/[&<>'"`=]/g, function(s) {
+                        return ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','"':'&quot;','`':'&#96;','=':'&#61;'}[s]);
+                    });
+                }
         // Utilities
         function getPosts() {
             return JSON.parse(localStorage.getItem('wishboard_posts') || '[]');
@@ -57,6 +76,56 @@ To use: Save as index.html and open in browser.
             localStorage.setItem('wishboard_posts', JSON.stringify(posts));
         }
 
+        // Device fingerprint (simple)
+        function getDeviceId() {
+            const data = [
+                navigator.userAgent,
+                navigator.language,
+                screen.width,
+                screen.height,
+                screen.colorDepth,
+                navigator.platform,
+                navigator.hardwareConcurrency
+            ].join('|');
+            let hash = 0;
+            for (let i = 0; i < data.length; i++) {
+                hash = ((hash << 5) - hash) + data.charCodeAt(i);
+                hash |= 0;
+            }
+            return 'dev-' + Math.abs(hash);
+        }
+
+        // Device identification logic
+        function showWishboard() {
+            document.getElementById('deviceIdContainer').style.display = 'none';
+            document.getElementById('wishboardContainer').style.display = '';
+            updateCurrentUser();
+        }
+
+        function updateCurrentUser() {
+            const user = localStorage.getItem('wishboard_user') || '(unknown)';
+            document.getElementById('currentUser').textContent = 'Device Name: ' + user;
+        }
+
+        document.getElementById('changeUserBtn').onclick = function() {
+            document.getElementById('wishboardContainer').style.display = 'none';
+            document.getElementById('deviceIdContainer').style.display = '';
+        };
+
+        function isDeviceIdentified() {
+            return localStorage.getItem('wishboard_device_id') === getDeviceId();
+        }
+
+        document.getElementById('deviceIdForm').onsubmit = function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            if (!username) return;
+            localStorage.setItem('wishboard_user', username);
+            localStorage.setItem('wishboard_device_id', getDeviceId());
+            showWishboard();
+            renderBoard();
+        };
+
         // Render Board
         let currentFilter = 'All';
         function renderBoard() {
@@ -64,17 +133,44 @@ To use: Save as index.html and open in browser.
             board.innerHTML = '';
             let posts = getPosts();
             if (currentFilter !== 'All') posts = posts.filter(p => p.type === currentFilter);
+
+            updateLeaderboardDisplay(posts);
+
             posts.forEach((post, idx) => {
                 const li = document.createElement('li');
+                const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
+                const safeHelper = post.helperName ? escapeHTML(post.helperName) : '';
                 li.innerHTML = `
                     <span>
-                        <strong>${post.type}:</strong> ${post.desc}
-                        ${post.helper ? '<span class="tag helper">Helper Found!</span>' : ''}
+                        <strong>${escapeHTML(post.type)}:</strong> ${escapeHTML(post.desc)}
+                        <span style="color:#40916c; font-size:0.95em; margin-left:8px;">by ${safeUser}</span>
+                        ${post.helper ? `<span class=\"tag helper\">Helper Found! (${safeHelper})</span>` : ''}
                     </span>
-                    ${!post.helper ? `<button onclick="markHelp(${idx})">I can help</button>` : ''}
+                    ${!post.helper ? `<button onclick=\"markHelp(${idx})\">I can help</button>` : ''}
                 `;
                 board.appendChild(li);
             });
+        }
+
+        // Leaderboard rendering separated for clarity and maintainability
+        function updateLeaderboardDisplay(posts) {
+            const helperCounts = {};
+            posts.forEach(post => {
+                if (post.helper && post.helperName) {
+                    helperCounts[post.helperName] = (helperCounts[post.helperName] || 0) + 1;
+                }
+            });
+            const leaderboardDiv = document.getElementById('leaderboard');
+            if (Object.keys(helperCounts).length > 0) {
+                const sortedHelpers = Object.entries(helperCounts).sort((a, b) => b[1] - a[1]);
+                let html = '<strong>Top Helpers:</strong><br>';
+                sortedHelpers.forEach(([name, count], i) => {
+                    html += `${i+1}. <span style="color:#06d6a0; font-weight:bold;">${escapeHTML(name)}</span> <span style="color:#6c757d;">(${count} helped)</span><br>`;
+                });
+                leaderboardDiv.innerHTML = html;
+            } else {
+                leaderboardDiv.innerHTML = '<em>No helpers yet.</em>';
+            }
         }
 
         // Add Post
@@ -83,8 +179,9 @@ To use: Save as index.html and open in browser.
             const type = document.getElementById('type').value;
             const desc = document.getElementById('desc').value.trim();
             if (!desc) return;
+            const user = localStorage.getItem('wishboard_user') || '(unknown)';
             const posts = getPosts();
-            posts.unshift({ type, desc, helper: false });
+            posts.unshift({ type, desc, user, helper: false });
             savePosts(posts);
             document.getElementById('desc').value = '';
             renderBoard();
@@ -93,7 +190,9 @@ To use: Save as index.html and open in browser.
         // Mark as Helped
         window.markHelp = function(idx) {
             const posts = getPosts();
+            const helperName = localStorage.getItem('wishboard_user') || '(unknown)';
             posts[idx].helper = true;
+            posts[idx].helperName = helperName;
             savePosts(posts);
             renderBoard();
             alert('Thanks for helping! Reach out locally.');
@@ -106,7 +205,10 @@ To use: Save as index.html and open in browser.
         };
 
         // Initial render
-        renderBoard();
+        if (isDeviceIdentified()) {
+            showWishboard();
+            renderBoard();
+        }
     </script>
 </body>
 </html>
