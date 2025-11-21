@@ -9,8 +9,7 @@
         h1 { text-align: center; color: #2d6a4f; }
         .desc { font-size:1em; color:#555; margin-bottom:16px; text-align:center; }
         form { display: flex; flex-direction: column; gap: 12px; }
-        input[type="text"], input[type="email"], input[type="tel"] { padding: 10px; border-radius: 4px; border: 1px solid #ccc; }
-        input.error { border-color: #d90429; }
+        input[type="text"], input[type="email"], input[type="tel"], input[type="password"] { padding: 10px; border-radius: 4px; border: 1px solid #ccc; }    input.error { border-color: #d90429; }
         button { background: #2d6a4f; color: #fff; border: none; border-radius: 4px; padding: 10px 0; cursor: pointer; font-size: 1em; }
         button:hover { background: #40916c; }
         .warn { color: #d90429; font-size:1em; font-weight:bold; margin-top:8px; text-align:center; }
@@ -27,6 +26,7 @@
             <div class="error-msg" id="idError">ID number must be exactly 8 digits (numbers only)</div>
             <input type="text" id="username" placeholder="Enter your name" required maxlength="32">
             <input type="email" id="gmail" placeholder="Enter your Gmail" required>
+            <input type="password" id="password" placeholder="Enter your password" required>
             <button type="submit">Continue</button>
         </form>
         <div class="warn">⚠️ This is NOT a secure login! Anyone using or modifying this device can access or impersonate your posts. Do NOT use for sensitive information.</div>
@@ -79,6 +79,7 @@
             const idNumber = document.getElementById('idNumber').value.trim();
             const username = document.getElementById('username').value.trim();
             const gmail = document.getElementById('gmail').value.trim();
+            const password = document.getElementById('password').value;
             
             // Validate ID number
             if (!validateIdNumber(idNumber)) {
@@ -88,11 +89,12 @@
                 return;
             }
             
-            if (!username || !gmail) return;
+            if (!username || !gmail || !password) return;
             
             localStorage.setItem('wishboard_user', username);
             localStorage.setItem('wishboard_id_number', idNumber);
             localStorage.setItem('wishboard_gmail', gmail);
+            localStorage.setItem('wishboard_password', password);
             localStorage.setItem('wishboard_device_id', getDeviceId());
             window.location.href = 'wishboard.html';
         };
