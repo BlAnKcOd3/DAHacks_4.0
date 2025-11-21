@@ -198,41 +198,84 @@
                 const hashedPassword = await hashPassword(password);
                 console.log('Password hashed');
                 
-                // Check if user already exists (by ID number or email)
-                console.log('Querying Firestore for existing user...');
-                const idQuery = query(usersRef, where('idNumber', '==', idNumber));
-                const emailQuery = query(usersRef, where('email', '==', email));
+                let useFirestore = true;
+                let idSnapshot = { empty: true };
+                let emailSnapshot = { empty: true };
                 
-                // Add timeout of 10 seconds for Firestore queries
-                const [idSnapshot, emailSnapshot] = await withTimeout(
-                    Promise.all([
-                        getDocs(idQuery),
-                        getDocs(emailQuery)
-                    ]),
-                    10000
-                );
-                console.log('Firestore queries completed');
+                // Try Firestore first, but fallback to localStorage if it fails
+                try {
+                    console.log('Querying Firestore for existing user...');
+                    const idQuery = query(usersRef, where('idNumber', '==', idNumber));
+                    const emailQuery = query(usersRef, where('email', '==', email));
+                    
+                    // Add timeout of 5 seconds for Firestore queries
+                    [idSnapshot, emailSnapshot] = await withTimeout(
+                        Promise.all([
+                            getDocs(idQuery),
+                            getDocs(emailQuery)
+                        ]),
+                        5000
+                    );
+                    console.log('Firestore queries completed');
+                } catch (firestoreError) {
+                    console.warn('Firestore query failed, using localStorage fallback:', firestoreError);
+                    useFirestore = false;
+                    
+                    // Fallback to localStorage
+                    const localUsers = JSON.parse(localStorage.getItem('wishboard_users') || '[]');
+                    const existingUserById = localUsers.find(u => u.idNumber === idNumber);
+                    const existingUserByEmail = localUsers.find(u => u.email === email);
+                    
+                    if (existingUserById) {
+                        idSnapshot = { 
+                            empty: false, 
+                            docs: [{ 
+                                id: existingUserById.id || existingUserById.idNumber, 
+                                data: () => existingUserById 
+                            }] 
+                        };
+                    } else {
+                        idSnapshot = { empty: true, docs: [] };
+                    }
+                    
+                    if (existingUserByEmail) {
+                        emailSnapshot = { 
+                            empty: false, 
+                            docs: [{ 
+                                id: existingUserByEmail.id || existingUserByEmail.idNumber, 
+                                data: () => existingUserByEmail 
+                            }] 
+                        };
+                    } else {
+                        emailSnapshot = { empty: true, docs: [] };
+                    }
+                }
 
                 // Check if ID number is already registered
                 if (!idSnapshot.empty) {
                     const userDoc = idSnapshot.docs[0];
-                    const userData = userDoc.data();
+                    const userData = typeof userDoc.data === 'function' ? userDoc.data() : userDoc;
+                    const userId = userDoc.id || userDoc.idNumber;
                     
                     // Verify password
                     if (userData.password === hashedPassword) {
                         // Login successful
                         localStorage.setItem('wishboard_user', username);
-                        localStorage.setItem('wishboard_user_id', userDoc.id);
+                        localStorage.setItem('wishboard_user_id', userId);
                         localStorage.setItem('wishboard_id_number', idNumber);
                         localStorage.setItem('wishboard_email', email);
                         localStorage.setItem('wishboard_device_id', getDeviceId());
                         
-                        // Update username if changed
-                        if (userData.username !== username) {
-                            await withTimeout(setDoc(doc(db, "users", userDoc.id), {
-                                ...userData,
-                                username: username
-                            }, { merge: true }), 10000);
+                        // Update username if changed (only if using Firestore)
+                        if (useFirestore && userData.username !== username) {
+                            try {
+                                await withTimeout(setDoc(doc(db, "users", userId), {
+                                    ...userData,
+                                    username: username
+                                }, { merge: true }), 5000);
+                            } catch (updateError) {
+                                console.warn('Failed to update username in Firestore:', updateError);
+                            }
                         }
                         
                         clearTimeout(safetyTimeout);
@@ -270,17 +313,38 @@
                     createdAt: Date.now()
                 };
 
-                const docRef = await withTimeout(addDoc(usersRef, userDoc), 10000);
+                let userId;
                 
-                // Save to localStorage
+                if (useFirestore) {
+                    try {
+                        const docRef = await withTimeout(addDoc(usersRef, userDoc), 5000);
+                        userId = docRef.id;
+                    } catch (firestoreError) {
+                        console.warn('Failed to save to Firestore, using localStorage:', firestoreError);
+                        useFirestore = false;
+                    }
+                }
+                
+                // Save to localStorage (always, as backup)
+                if (!useFirestore) {
+                    const localUsers = JSON.parse(localStorage.getItem('wishboard_users') || '[]');
+                    userId = 'local_' + Date.now();
+                    localUsers.push({ ...userDoc, id: userId });
+                    localStorage.setItem('wishboard_users', JSON.stringify(localUsers));
+                }
+                
                 localStorage.setItem('wishboard_user', username);
-                localStorage.setItem('wishboard_user_id', docRef.id);
+                localStorage.setItem('wishboard_user_id', userId);
                 localStorage.setItem('wishboard_id_number', idNumber);
                 localStorage.setItem('wishboard_email', email);
                 localStorage.setItem('wishboard_device_id', getDeviceId());
                 
                 clearTimeout(safetyTimeout);
-                formSuccess.textContent = 'Registration successful! Redirecting...';
+                if (!useFirestore) {
+                    formSuccess.textContent = 'Registration successful! (Using local storage - Firestore unavailable)';
+                } else {
+                    formSuccess.textContent = 'Registration successful! Redirecting...';
+                }
                 formSuccess.classList.add('show');
                 submitBtn.textContent = 'Success! Redirecting...';
                 
@@ -290,24 +354,30 @@
                 
             } catch (error) {
                 console.error('Error:', error);
+                clearTimeout(safetyTimeout);
+                
                 let errorMessage = 'An error occurred. Please try again.';
                 
                 if (error.message) {
-                    errorMessage = error.message;
+                    if (error.message.includes('timeout') || error.message.includes('timed out')) {
+                        errorMessage = 'Connection timeout. The app will use local storage. To enable cloud sync, please check Firestore security rules in Firebase Console.';
+                    } else {
+                        errorMessage = error.message;
+                    }
                 } else if (error.code) {
                     // Firebase error codes
                     switch(error.code) {
                         case 'permission-denied':
-                            errorMessage = 'Permission denied. Please check Firestore security rules.';
+                            errorMessage = 'Firestore permission denied. To fix: Go to Firebase Console → Firestore Database → Rules, and add: match /users/{userId} { allow read, write: if true; }';
                             break;
                         case 'unavailable':
-                            errorMessage = 'Service unavailable. Please check your internet connection.';
+                            errorMessage = 'Firestore unavailable. Using local storage. Check your internet connection.';
                             break;
                         case 'deadline-exceeded':
-                            errorMessage = 'Request timed out. Please try again.';
+                            errorMessage = 'Request timed out. Using local storage.';
                             break;
                         default:
-                            errorMessage = 'Error: ' + error.code;
+                            errorMessage = 'Error: ' + error.code + '. Using local storage as fallback.';
                     }
                 }
                 
@@ -315,9 +385,6 @@
                 formError.classList.add('show');
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
-            } finally {
-                // Always clear the safety timeout
-                clearTimeout(safetyTimeout);
             }
         };
         
