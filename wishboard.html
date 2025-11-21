@@ -43,6 +43,9 @@
         .listing-images { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
         .listing-images img { max-width: 150px; max-height: 150px; border-radius: 4px; object-fit: cover; cursor: pointer; }
         textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-family: Arial, sans-serif; resize: vertical; min-height: 60px; }
+        .edit-btn { background: #40916c; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 0.9em; margin-left: 8px; }
+        .edit-btn:hover { background: #2d6a4f; }
+        .currency-symbol { font-weight: bold; color: #2d6a4f; }
     </style>
 </head>
 <body>
@@ -62,7 +65,163 @@
         </div>
         <form id="postForm">
             <input type="text" id="title" placeholder="Item Title" required maxlength="40">
-            <input type="number" id="price" placeholder="Price ($)" min="0" step="0.01">
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <select id="currency" style="width: 120px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="USD" selected>USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="CNY">CNY (¥)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="AUD">AUD (A$)</option>
+                    <option value="CAD">CAD (C$)</option>
+                    <option value="CHF">CHF (Fr)</option>
+                    <option value="HKD">HKD (HK$)</option>
+                    <option value="SGD">SGD (S$)</option>
+                    <option value="NZD">NZD (NZ$)</option>
+                    <option value="KRW">KRW (₩)</option>
+                    <option value="MXN">MXN ($)</option>
+                    <option value="BRL">BRL (R$)</option>
+                    <option value="ZAR">ZAR (R)</option>
+                    <option value="RUB">RUB (₽)</option>
+                    <option value="TRY">TRY (₺)</option>
+                    <option value="SEK">SEK (kr)</option>
+                    <option value="NOK">NOK (kr)</option>
+                    <option value="DKK">DKK (kr)</option>
+                    <option value="PLN">PLN (zł)</option>
+                    <option value="THB">THB (฿)</option>
+                    <option value="IDR">IDR (Rp)</option>
+                    <option value="MYR">MYR (RM)</option>
+                    <option value="PHP">PHP (₱)</option>
+                    <option value="VND">VND (₫)</option>
+                    <option value="AED">AED (د.إ)</option>
+                    <option value="SAR">SAR (﷼)</option>
+                    <option value="ILS">ILS (₪)</option>
+                    <option value="EGP">EGP (E£)</option>
+                    <option value="NGN">NGN (₦)</option>
+                    <option value="ARS">ARS ($)</option>
+                    <option value="CLP">CLP ($)</option>
+                    <option value="COP">COP ($)</option>
+                    <option value="PEN">PEN (S/)</option>
+                    <option value="CZK">CZK (Kč)</option>
+                    <option value="HUF">HUF (Ft)</option>
+                    <option value="RON">RON (lei)</option>
+                    <option value="BGN">BGN (лв)</option>
+                    <option value="HRK">HRK (kn)</option>
+                    <option value="UAH">UAH (₴)</option>
+                    <option value="PKR">PKR (₨)</option>
+                    <option value="BDT">BDT (৳)</option>
+                    <option value="LKR">LKR (₨)</option>
+                    <option value="NPR">NPR (₨)</option>
+                    <option value="MMK">MMK (K)</option>
+                    <option value="KZT">KZT (₸)</option>
+                    <option value="UZS">UZS (лв)</option>
+                    <option value="KWD">KWD (د.ك)</option>
+                    <option value="QAR">QAR (﷼)</option>
+                    <option value="OMR">OMR (﷼)</option>
+                    <option value="BHD">BHD (.د.ب)</option>
+                    <option value="JOD">JOD (د.ا)</option>
+                    <option value="LBP">LBP (ل.ل)</option>
+                    <option value="ISK">ISK (kr)</option>
+                    <option value="RSD">RSD (Дин.)</option>
+                    <option value="BAM">BAM (КМ)</option>
+                    <option value="MKD">MKD (ден)</option>
+                    <option value="ALL">ALL (L)</option>
+                    <option value="MDL">MDL (L)</option>
+                    <option value="GEL">GEL (₾)</option>
+                    <option value="AMD">AMD (֏)</option>
+                    <option value="AZN">AZN (₼)</option>
+                    <option value="BYN">BYN (Br)</option>
+                    <option value="TJS">TJS (ЅМ)</option>
+                    <option value="TMT">TMT (m)</option>
+                    <option value="UYU">UYU ($U)</option>
+                    <option value="PYG">PYG (Gs)</option>
+                    <option value="BOB">BOB (Bs.)</option>
+                    <option value="GTQ">GTQ (Q)</option>
+                    <option value="HNL">HNL (L)</option>
+                    <option value="NIO">NIO (C$)</option>
+                    <option value="CRC">CRC (₡)</option>
+                    <option value="PAB">PAB (B/.)</option>
+                    <option value="DOP">DOP (RD$)</option>
+                    <option value="JMD">JMD (J$)</option>
+                    <option value="BBD">BBD (Bds$)</option>
+                    <option value="BZD">BZD (BZ$)</option>
+                    <option value="BMD">BMD (BD$)</option>
+                    <option value="BSD">BSD (B$)</option>
+                    <option value="XCD">XCD ($)</option>
+                    <option value="AWG">AWG (ƒ)</option>
+                    <option value="ANG">ANG (ƒ)</option>
+                    <option value="TTD">TTD (TT$)</option>
+                    <option value="GYD">GYD (G$)</option>
+                    <option value="SRD">SRD ($)</option>
+                    <option value="FJD">FJD (FJ$)</option>
+                    <option value="PGK">PGK (K)</option>
+                    <option value="SBD">SBD (SI$)</option>
+                    <option value="VUV">VUV (Vt)</option>
+                    <option value="WST">WST (WS$)</option>
+                    <option value="TOP">TOP (T$)</option>
+                    <option value="XPF">XPF (₣)</option>
+                    <option value="MOP">MOP (P)</option>
+                    <option value="TWD">TWD (NT$)</option>
+                    <option value="KHR">KHR (៛)</option>
+                    <option value="LAK">LAK (₭)</option>
+                    <option value="BND">BND (B$)</option>
+                    <option value="AFN">AFN (؋)</option>
+                    <option value="IRR">IRR (﷼)</option>
+                    <option value="IQD">IQD (ع.د)</option>
+                    <option value="YER">YER (﷼)</option>
+                    <option value="SYP">SYP (£)</option>
+                    <option value="JOD">JOD (د.ا)</option>
+                    <option value="LBP">LBP (ل.ل)</option>
+                    <option value="ETB">ETB (Br)</option>
+                    <option value="KES">KES (KSh)</option>
+                    <option value="UGX">UGX (USh)</option>
+                    <option value="TZS">TZS (TSh)</option>
+                    <option value="RWF">RWF (RF)</option>
+                    <option value="BIF">BIF (FBu)</option>
+                    <option value="DJF">DJF (Fdj)</option>
+                    <option value="SOS">SOS (S)</option>
+                    <option value="ERN">ERN (Nfk)</option>
+                    <option value="SDG">SDG (ج.س)</option>
+                    <option value="SSP">SSP (£)</option>
+                    <option value="MZN">MZN (MT)</option>
+                    <option value="AOA">AOA (Kz)</option>
+                    <option value="ZMW">ZMW (ZK)</option>
+                    <option value="MWK">MWK (MK)</option>
+                    <option value="MGA">MGA (Ar)</option>
+                    <option value="MUR">MUR (₨)</option>
+                    <option value="SCR">SCR (₨)</option>
+                    <option value="KMF">KMF (CF)</option>
+                    <option value="CDF">CDF (FC)</option>
+                    <option value="XAF">XAF (FCFA)</option>
+                    <option value="XOF">XOF (CFA)</option>
+                    <option value="GHS">GHS (₵)</option>
+                    <option value="GMD">GMD (D)</option>
+                    <option value="GNF">GNF (FG)</option>
+                    <option value="SLL">SLL (Le)</option>
+                    <option value="LRD">LRD (L$)</option>
+                    <option value="CVE">CVE ($)</option>
+                    <option value="STN">STN (Db)</option>
+                    <option value="GIP">GIP (£)</option>
+                    <option value="FKP">FKP (£)</option>
+                    <option value="SHP">SHP (£)</option>
+                    <option value="IMP">IMP (£)</option>
+                    <option value="JEP">JEP (£)</option>
+                    <option value="GGP">GGP (£)</option>
+                    <option value="BWP">BWP (P)</option>
+                    <option value="SZL">SZL (L)</option>
+                    <option value="LSL">LSL (L)</option>
+                    <option value="NAD">NAD (N$)</option>
+                    <option value="MAD">MAD (د.م.)</option>
+                    <option value="DZD">DZD (د.ج)</option>
+                    <option value="TND">TND (د.ت)</option>
+                    <option value="LYD">LYD (ل.د)</option>
+                    <option value="XDR">XDR (SDR)</option>
+                    <option value="BTC">BTC (₿)</option>
+                    <option value="ETH">ETH (Ξ)</option>
+                </select>
+                <input type="text" id="price" placeholder="Enter price (e.g., 100 or 99.99)" pattern="[0-9]+(\.[0-9]{1,2})?" style="flex: 1;">
+            </div>
             <div class="negotiable-option">
                 <input type="checkbox" id="negotiable" name="negotiable">
                 <label for="negotiable">Price is negotiable / Open to offers</label>
@@ -79,8 +238,9 @@
                 <input type="file" id="images" accept="image/*" multiple>
                 <div class="image-preview-container" id="imagePreview"></div>
             </div>
-            <input type="text" id="contact" placeholder="Contact Info (optional)" maxlength="40">
-            <button type="submit">Post Item</button>
+            <input type="text" id="contact" placeholder="Contact Info" required maxlength="40">
+            <input type="hidden" id="editListingId" value="">
+            <button type="submit" id="submitBtn">Post Item</button>
         </form>
         <div class="filters">
             <button onclick="filterPosts('All')">All</button>
@@ -155,7 +315,7 @@ window.removeImage = function(index) {
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCO-w3HsDbLVbEk_J7qYEMkrpgUC_CWn54",
@@ -230,29 +390,63 @@ document.getElementById('deleteDataBtn').onclick = function() {
     }
 };
 let currentFilter = 'All';
+// Currency symbols mapping
+const currencySymbols = {
+    'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'CNY': '¥', 'INR': '₹', 'AUD': 'A$', 'CAD': 'C$',
+    'CHF': 'Fr', 'HKD': 'HK$', 'SGD': 'S$', 'NZD': 'NZ$', 'KRW': '₩', 'MXN': '$', 'BRL': 'R$',
+    'ZAR': 'R', 'RUB': '₽', 'TRY': '₺', 'SEK': 'kr', 'NOK': 'kr', 'DKK': 'kr', 'PLN': 'zł',
+    'THB': '฿', 'IDR': 'Rp', 'MYR': 'RM', 'PHP': '₱', 'VND': '₫', 'AED': 'د.إ', 'SAR': '﷼',
+    'ILS': '₪', 'EGP': 'E£', 'NGN': '₦', 'ARS': '$', 'CLP': '$', 'COP': '$', 'PEN': 'S/',
+    'CZK': 'Kč', 'HUF': 'Ft', 'RON': 'lei', 'BGN': 'лв', 'HRK': 'kn', 'UAH': '₴', 'PKR': '₨',
+    'BDT': '৳', 'LKR': '₨', 'NPR': '₨', 'MMK': 'K', 'KZT': '₸', 'UZS': 'лв', 'KWD': 'د.ك',
+    'QAR': '﷼', 'OMR': '﷼', 'BHD': '.د.ب', 'JOD': 'د.ا', 'LBP': 'ل.ل', 'ISK': 'kr', 'RSD': 'Дин.',
+    'BAM': 'КМ', 'MKD': 'ден', 'ALL': 'L', 'MDL': 'L', 'GEL': '₾', 'AMD': '֏', 'AZN': '₼',
+    'BYN': 'Br', 'TJS': 'ЅМ', 'TMT': 'm', 'UYU': '$U', 'PYG': 'Gs', 'BOB': 'Bs.', 'GTQ': 'Q',
+    'HNL': 'L', 'NIO': 'C$', 'CRC': '₡', 'PAB': 'B/.', 'DOP': 'RD$', 'JMD': 'J$', 'BBD': 'Bds$',
+    'BZD': 'BZ$', 'BMD': 'BD$', 'BSD': 'B$', 'XCD': '$', 'AWG': 'ƒ', 'ANG': 'ƒ', 'TTD': 'TT$',
+    'GYD': 'G$', 'SRD': '$', 'FJD': 'FJ$', 'PGK': 'K', 'SBD': 'SI$', 'VUV': 'Vt', 'WST': 'WS$',
+    'TOP': 'T$', 'XPF': '₣', 'MOP': 'P', 'TWD': 'NT$', 'KHR': '៛', 'LAK': '₭', 'BND': 'B$',
+    'AFN': '؋', 'IRR': '﷼', 'IQD': 'ع.د', 'YER': '﷼', 'SYP': '£', 'ETB': 'Br', 'KES': 'KSh',
+    'UGX': 'USh', 'TZS': 'TSh', 'RWF': 'RF', 'BIF': 'FBu', 'DJF': 'Fdj', 'SOS': 'S', 'ERN': 'Nfk',
+    'SDG': 'ج.س', 'SSP': '£', 'MZN': 'MT', 'AOA': 'Kz', 'ZMW': 'ZK', 'MWK': 'MK', 'MGA': 'Ar',
+    'MUR': '₨', 'SCR': '₨', 'KMF': 'CF', 'CDF': 'FC', 'XAF': 'FCFA', 'XOF': 'CFA', 'GHS': '₵',
+    'GMD': 'D', 'GNF': 'FG', 'SLL': 'Le', 'LRD': 'L$', 'CVE': '$', 'STN': 'Db', 'GIP': '£',
+    'FKP': '£', 'SHP': '£', 'IMP': '£', 'JEP': '£', 'GGP': '£', 'BWP': 'P', 'SZL': 'L',
+    'LSL': 'L', 'NAD': 'N$', 'MAD': 'د.م.', 'DZD': 'د.ج', 'TND': 'د.ت', 'LYD': 'ل.د',
+    'XDR': 'SDR', 'BTC': '₿', 'ETH': 'Ξ'
+};
+
 function renderBoard(posts) {
     const board = document.getElementById('board');
     board.innerHTML = '';
     let filtered = posts;
     if (currentFilter !== 'All') filtered = posts.filter(p => p.category === currentFilter);
+    const currentUser = localStorage.getItem('wishboard_user') || '(unknown)';
+    
     filtered.forEach((post, idx) => {
         const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
         const safeTitle = escapeHTML(post.title || 'Untitled');
         const safeDesc = escapeHTML(post.desc || '');
         const safeCategory = escapeHTML(post.category || 'Other');
-        const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
+        const currency = post.currency || 'USD';
+        const currencySymbol = currencySymbols[currency] || '$';
+        const safePrice = post.price !== undefined && post.price !== '' 
+            ? `${currencySymbol}${escapeHTML(post.price)}` 
+            : 'N/A';
         const safeContact = escapeHTML(post.contact || '');
         const negotiable = post.negotiable || false;
         const images = post.images || [];
+        const isOwner = safeUser === currentUser;
         
         const li = document.createElement('li');
         li.innerHTML = `
             <div class="listing-header">${safeTitle} <span class="category">${safeCategory}</span></div>
             ${images.length > 0 ? `<div class="listing-images">${images.map(img => `<img src="${img}" alt="${safeTitle}" onclick="window.open('${img}', '_blank')">`).join('')}</div>` : ''}
             <div class="listing-details">${safeDesc}</div>
-            <div><strong>Price:</strong> ${safePrice}${negotiable ? '<span class="negotiable-badge">Negotiable</span>' : ''}</div>
+            <div><strong>Price:</strong> ${safePrice} <span class="currency-symbol">(${currency})</span>${negotiable ? '<span class="negotiable-badge">Negotiable</span>' : ''}</div>
             <div><strong>Seller:</strong> ${safeUser}</div>
         `;
+        
         if (safeContact) {
             const btn = document.createElement('button');
             btn.className = 'contact';
@@ -262,15 +456,66 @@ function renderBoard(posts) {
             });
             li.appendChild(btn);
         }
+        
+        // Add edit button for owner
+        if (isOwner && post.id) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'edit-btn';
+            editBtn.textContent = 'Edit Listing';
+            editBtn.addEventListener('click', function() {
+                editListing(post.id);
+            });
+            li.appendChild(editBtn);
+        }
+        
         board.appendChild(li);
     });
+}
+
+async function editListing(listingId) {
+    try {
+        const docRef = doc(db, "listings", listingId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Populate form
+            document.getElementById('title').value = data.title || '';
+            document.getElementById('price').value = data.price || '';
+            document.getElementById('currency').value = data.currency || 'USD';
+            document.getElementById('category').value = data.category || 'Other';
+            document.getElementById('desc').value = data.desc || '';
+            document.getElementById('contact').value = data.contact || '';
+            document.getElementById('negotiable').checked = data.negotiable || false;
+            document.getElementById('editListingId').value = listingId;
+            
+            // Handle images
+            selectedImages = [];
+            if (data.images && data.images.length > 0) {
+                data.images.forEach(imgData => {
+                    selectedImages.push({ file: null, data: imgData });
+                });
+            }
+            updateImagePreview();
+            
+            // Change button text
+            document.getElementById('submitBtn').textContent = 'Update Listing';
+            
+            // Scroll to form
+            document.getElementById('postForm').scrollIntoView({ behavior: 'smooth' });
+        }
+    } catch (error) {
+        console.error('Error loading listing:', error);
+        alert('Error loading listing. Please try again.');
+    }
 }
 // Listen for Firestore changes
 const q = query(listingsRef, orderBy("created", "desc"));
 onSnapshot(q, (snapshot) => {
     const posts = [];
-    snapshot.forEach(doc => {
-        posts.push(doc.data());
+    snapshot.forEach(docSnap => {
+        posts.push({ ...docSnap.data(), id: docSnap.id });
     });
     renderBoard(posts);
 });
@@ -278,31 +523,55 @@ document.getElementById('postForm').onsubmit = async function(e) {
     e.preventDefault();
     const title = document.getElementById('title').value.trim();
     const price = document.getElementById('price').value.trim();
+    const currency = document.getElementById('currency').value;
     const category = document.getElementById('category').value;
     const desc = document.getElementById('desc').value.trim();
     const contact = document.getElementById('contact').value.trim();
     const negotiable = document.getElementById('negotiable').checked;
+    const editListingId = document.getElementById('editListingId').value;
     
-    if (!title || !desc) return;
+    if (!title || !desc || !contact) {
+        alert('Please fill in all required fields (Title, Description, and Contact Info)');
+        return;
+    }
+    
+    // Validate price format
+    if (price && !/^[0-9]+(\.[0-9]{1,2})?$/.test(price)) {
+        alert('Please enter a valid price (e.g., 100 or 99.99)');
+        return;
+    }
     
     // Convert images to base64 array
     const images = selectedImages.map(img => img.data);
     
     const user = localStorage.getItem('wishboard_user') || '(unknown)';
-    await addDoc(listingsRef, {
-        title, price, category, desc, contact, user, negotiable, images,
+    const listingData = {
+        title, price, currency, category, desc, contact, user, negotiable, images,
         created: Date.now()
-    });
+    };
+    
+    if (editListingId) {
+        // Update existing listing
+        const docRef = doc(db, "listings", editListingId);
+        await updateDoc(docRef, listingData);
+    } else {
+        // Create new listing
+        await addDoc(listingsRef, listingData);
+    }
     
     // Reset form
     document.getElementById('title').value = '';
     document.getElementById('price').value = '';
+    document.getElementById('currency').value = 'USD';
+    document.getElementById('category').value = 'Books';
     document.getElementById('desc').value = '';
     document.getElementById('contact').value = '';
     document.getElementById('negotiable').checked = false;
+    document.getElementById('editListingId').value = '';
+    document.getElementById('submitBtn').textContent = 'Post Item';
     selectedImages = [];
-    imagePreview.innerHTML = '';
-    imageInput.value = '';
+    if (imagePreview) imagePreview.innerHTML = '';
+    if (imageInput) imageInput.value = '';
 };
 window.filterPosts = function(type) {
     currentFilter = type;
