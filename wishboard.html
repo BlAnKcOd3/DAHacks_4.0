@@ -94,7 +94,6 @@ if (priceInput) {
     </div>
     <div class="container">
         <h1>De Anza Marketplace</h1>
-        <div class="warn">⚠️ This is NOT a secure login! Your name is only saved for this browser/device. Anyone using or modifying this device can access or impersonate your posts. Do NOT use for sensitive information.</div>
         <div class="actions">
             <button id="logoutBtn">Log Out</button>
             <button id="deleteDataBtn" class="delete">Delete All Data</button>
@@ -209,6 +208,7 @@ if (priceInput) {
             <button onclick="filterPosts('Services')">Services</button>
             <button onclick="filterPosts('Other')">Other</button>
         </div>
+        <button id="refreshListingsBtn" style="background:#6c757d;color:#fff;border:none;border-radius:4px;padding:8px 20px;cursor:pointer;font-size:1em;margin-bottom:16px;width:100%;">Refresh Listings</button>
         <ul id="board"></ul>
     </div>
     <script type="module" src="app.js"></script>
@@ -584,6 +584,24 @@ window.filterPosts = function(type) {
     currentFilter = type;
     // Board will auto-update via Firestore listener
 };
+// Refresh Listings button logic
+const refreshBtn = document.getElementById('refreshListingsBtn');
+if (refreshBtn) {
+    refreshBtn.onclick = async function() {
+        await refreshListings();
+    };
+}
+
+async function refreshListings() {
+    const q = query(listingsRef, orderBy("created", "desc"));
+    const snapshot = await getDocs(q);
+    const posts = [];
+    snapshot.forEach(docSnap => {
+        posts.push({ ...docSnap.data(), id: docSnap.id });
+    });
+    renderBoard(posts);
+}
+
 // Check if user is logged in (using localStorage to match login.html)
 // Check for wishboard_user_id first (set by login.html), then fallback to wishboard_user
 const userId = localStorage.getItem('wishboard_user_id');
