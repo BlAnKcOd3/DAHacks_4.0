@@ -30,7 +30,8 @@
             <input type="tel" id="idNumber" placeholder="Enter your ID number (8 digits)" required maxlength="8" pattern="[0-9]{8}">
             <div class="error-msg" id="idError">ID number must be exactly 8 digits (numbers only)</div>
             <input type="text" id="username" placeholder="Enter your name" required maxlength="32">
-            <input type="email" id="gmail" placeholder="Enter your Gmail" required>
+            <input type="email" id="email" placeholder="Enter your email address" required>
+            <div class="error-msg" id="emailError">Please enter a valid email address</div>
             <input type="password" id="password" placeholder="Enter your password" required>
             <div class="error-msg" id="formError"></div>
             <div class="success-msg" id="formSuccess"></div>
@@ -74,9 +75,16 @@
             return idRegex.test(idNumber);
         }
 
+        // Validate email
+        function validateEmail(email) {
+            return email.includes('@') && email.length > 3;
+        }
+
         // ID number input validation
         const idInput = document.getElementById('idNumber');
         const idError = document.getElementById('idError');
+        const emailInput = document.getElementById('email');
+        const emailError = document.getElementById('emailError');
         const formError = document.getElementById('formError');
         const formSuccess = document.getElementById('formSuccess');
         
@@ -94,11 +102,23 @@
             }
         });
 
+        // Email input validation
+        emailInput.addEventListener('input', function(e) {
+            const value = e.target.value.trim();
+            if (value.length > 0 && !validateEmail(value)) {
+                emailInput.classList.add('error');
+                emailError.classList.add('show');
+            } else {
+                emailInput.classList.remove('error');
+                emailError.classList.remove('show');
+            }
+        });
+
         document.getElementById('deviceIdForm').onsubmit = async function(e) {
             e.preventDefault();
             const idNumber = document.getElementById('idNumber').value.trim();
             const username = document.getElementById('username').value.trim();
-            const gmail = document.getElementById('gmail').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             
             // Clear previous messages
@@ -114,7 +134,15 @@
                 return;
             }
             
-            if (!username || !gmail || !password) {
+            // Validate email
+            if (!validateEmail(email)) {
+                emailInput.classList.add('error');
+                emailError.classList.add('show');
+                emailInput.focus();
+                return;
+            }
+            
+            if (!username || !email || !password) {
                 formError.textContent = 'Please fill in all fields';
                 formError.classList.add('show');
                 return;
@@ -130,7 +158,7 @@
                 
                 // Check if user already exists (by ID number or email)
                 const idQuery = query(usersRef, where('idNumber', '==', idNumber));
-                const emailQuery = query(usersRef, where('gmail', '==', gmail));
+                const emailQuery = query(usersRef, where('email', '==', email));
                 
                 const [idSnapshot, emailSnapshot] = await Promise.all([
                     getDocs(idQuery),
@@ -148,7 +176,7 @@
                         localStorage.setItem('wishboard_user', username);
                         localStorage.setItem('wishboard_user_id', userDoc.id);
                         localStorage.setItem('wishboard_id_number', idNumber);
-                        localStorage.setItem('wishboard_gmail', gmail);
+                        localStorage.setItem('wishboard_email', email);
                         localStorage.setItem('wishboard_device_id', getDeviceId());
                         
                         // Update username if changed
@@ -159,7 +187,10 @@
                             }, { merge: true });
                         }
                         
-                        window.location.href = 'wishboard.html';
+                        submitBtn.textContent = 'Success! Redirecting...';
+                        setTimeout(() => {
+                            window.location.href = 'wishboard.html';
+                        }, 500);
                         return;
                     } else {
                         formError.textContent = 'Incorrect password';
@@ -183,7 +214,7 @@
                 const userDoc = {
                     idNumber: idNumber,
                     username: username,
-                    gmail: gmail,
+                    email: email,
                     password: hashedPassword,
                     createdAt: Date.now()
                 };
@@ -194,11 +225,12 @@
                 localStorage.setItem('wishboard_user', username);
                 localStorage.setItem('wishboard_user_id', docRef.id);
                 localStorage.setItem('wishboard_id_number', idNumber);
-                localStorage.setItem('wishboard_gmail', gmail);
+                localStorage.setItem('wishboard_email', email);
                 localStorage.setItem('wishboard_device_id', getDeviceId());
                 
                 formSuccess.textContent = 'Registration successful! Redirecting...';
                 formSuccess.classList.add('show');
+                submitBtn.textContent = 'Success! Redirecting...';
                 
                 setTimeout(() => {
                     window.location.href = 'wishboard.html';
@@ -206,7 +238,7 @@
                 
             } catch (error) {
                 console.error('Error:', error);
-                formError.textContent = 'An error occurred. Please try again.';
+                formError.textContent = 'An error occurred: ' + (error.message || 'Please check your connection and try again.');
                 formError.classList.add('show');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Login / Register';
