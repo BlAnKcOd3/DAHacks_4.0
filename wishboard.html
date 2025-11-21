@@ -16,9 +16,9 @@
         .actions { margin-bottom:12px; text-align:center; }
         .actions button { background:#e63946; color:#fff; border:none; border-radius:4px; padding:4px 12px; cursor:pointer; font-size:0.95em; margin-right:8px; }
         .actions .delete { background:#6c757d; }
-        form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-        select, input[type="text"], input[type="number"] { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
-        input[type="number"] { max-width: 100px; }
+        form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+        form > input[type="text"], form > input[type="number"], form > select, form > textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        form > input[type="number"] { max-width: 150px; }
         button[type="submit"] { background: #2d6a4f; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; }
         button[type="submit"]:hover { background: #40916c; }
         .filters { margin-bottom: 16px; text-align: center; }
@@ -30,6 +30,19 @@
         .tag { background: #ffd166; color: #6c757d; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
         .category { background: #b7e4c7; color: #2d6a4f; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
         .contact { background: #06d6a0; color: #fff; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
+        .image-upload { margin: 8px 0; }
+        .image-upload input[type="file"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .image-preview-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .image-preview { position: relative; width: 80px; height: 80px; border: 1px solid #ccc; border-radius: 4px; overflow: hidden; }
+        .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .image-preview .remove-image { position: absolute; top: 2px; right: 2px; background: rgba(217, 4, 41, 0.8); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 12px; line-height: 1; }
+        .negotiable-option { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+        .negotiable-option input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .negotiable-option label { cursor: pointer; color: #2d6a4f; font-weight: bold; }
+        .negotiable-badge { background: #ffd166; color: #2d6a4f; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; font-weight: bold; }
+        .listing-images { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+        .listing-images img { max-width: 150px; max-height: 150px; border-radius: 4px; object-fit: cover; cursor: pointer; }
+        textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-family: Arial, sans-serif; resize: vertical; min-height: 60px; }
     </style>
 </head>
 <body>
@@ -50,6 +63,10 @@
         <form id="postForm">
             <input type="text" id="title" placeholder="Item Title" required maxlength="40">
             <input type="number" id="price" placeholder="Price ($)" min="0" step="0.01">
+            <div class="negotiable-option">
+                <input type="checkbox" id="negotiable" name="negotiable">
+                <label for="negotiable">Price is negotiable / Open to offers</label>
+            </div>
             <select id="category">
                 <option value="Books">Books</option>
                 <option value="Electronics">Electronics</option>
@@ -57,7 +74,11 @@
                 <option value="Services">Services</option>
                 <option value="Other">Other</option>
             </select>
-            <input type="text" id="desc" placeholder="Description" required maxlength="80">
+            <textarea id="desc" placeholder="Description" required maxlength="500"></textarea>
+            <div class="image-upload">
+                <input type="file" id="images" accept="image/*" multiple>
+                <div class="image-preview-container" id="imagePreview"></div>
+            </div>
             <input type="text" id="contact" placeholder="Contact Info (optional)" maxlength="40">
             <button type="submit">Post Item</button>
         </form>
@@ -76,6 +97,63 @@
 document.getElementById('loginBtn').onclick = function() {
     window.location.href = 'login.html';
 };
+
+// Image preview handling
+let selectedImages = [];
+const imageInput = document.getElementById('images');
+const imagePreview = document.getElementById('imagePreview');
+
+if (imageInput && imagePreview) {
+    imageInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        
+        // Limit to 5 images
+        if (selectedImages.length + files.length > 5) {
+            alert('Maximum 5 images allowed');
+            return;
+        }
+        
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    selectedImages.push({ file: file, data: imageData });
+                    updateImagePreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+}
+
+function updateImagePreview() {
+    if (!imagePreview) return;
+    imagePreview.innerHTML = '';
+    selectedImages.forEach((img, index) => {
+        const div = document.createElement('div');
+        div.className = 'image-preview';
+        div.innerHTML = `
+            <img src="${img.data}" alt="Preview">
+            <button type="button" class="remove-image" onclick="removeImage(${index})">×</button>
+        `;
+        imagePreview.appendChild(div);
+    });
+}
+
+window.removeImage = function(index) {
+    selectedImages.splice(index, 1);
+    updateImagePreview();
+    // Update file input
+    const dt = new DataTransfer();
+    selectedImages.forEach(img => {
+        dt.items.add(img.file);
+    });
+    if (imageInput) {
+        imageInput.files = dt.files;
+    }
+};
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
@@ -164,11 +242,15 @@ function renderBoard(posts) {
         const safeCategory = escapeHTML(post.category || 'Other');
         const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
         const safeContact = escapeHTML(post.contact || '');
+        const negotiable = post.negotiable || false;
+        const images = post.images || [];
+        
         const li = document.createElement('li');
         li.innerHTML = `
             <div class="listing-header">${safeTitle} <span class="category">${safeCategory}</span></div>
+            ${images.length > 0 ? `<div class="listing-images">${images.map(img => `<img src="${img}" alt="${safeTitle}" onclick="window.open('${img}', '_blank')">`).join('')}</div>` : ''}
             <div class="listing-details">${safeDesc}</div>
-            <div><strong>Price:</strong> ${safePrice}</div>
+            <div><strong>Price:</strong> ${safePrice}${negotiable ? '<span class="negotiable-badge">Negotiable</span>' : ''}</div>
             <div><strong>Seller:</strong> ${safeUser}</div>
         `;
         if (safeContact) {
@@ -199,16 +281,28 @@ document.getElementById('postForm').onsubmit = async function(e) {
     const category = document.getElementById('category').value;
     const desc = document.getElementById('desc').value.trim();
     const contact = document.getElementById('contact').value.trim();
+    const negotiable = document.getElementById('negotiable').checked;
+    
     if (!title || !desc) return;
+    
+    // Convert images to base64 array
+    const images = selectedImages.map(img => img.data);
+    
     const user = localStorage.getItem('wishboard_user') || '(unknown)';
     await addDoc(listingsRef, {
-        title, price, category, desc, contact, user,
+        title, price, category, desc, contact, user, negotiable, images,
         created: Date.now()
     });
+    
+    // Reset form
     document.getElementById('title').value = '';
     document.getElementById('price').value = '';
     document.getElementById('desc').value = '';
     document.getElementById('contact').value = '';
+    document.getElementById('negotiable').checked = false;
+    selectedImages = [];
+    imagePreview.innerHTML = '';
+    imageInput.value = '';
 };
 window.filterPosts = function(type) {
     currentFilter = type;
