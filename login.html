@@ -30,7 +30,8 @@
             <input type="tel" id="idNumber" placeholder="Enter your ID number (8 digits)" required maxlength="8" pattern="[0-9]{8}">
             <div class="error-msg" id="idError">ID number must be exactly 8 digits (numbers only)</div>
             <input type="text" id="username" placeholder="Enter your name" required maxlength="32">
-            <input type="email" id="gmail" placeholder="Enter your Gmail" required>
+            <input type="email" id="email" placeholder="Enter your email address" required>
+            <div class="error-msg" id="emailError">Please enter a valid email address</div>
             <input type="password" id="password" placeholder="Enter your password" required>
             <div class="error-msg" id="formError"></div>
             <div class="success-msg" id="formSuccess"></div>
@@ -63,9 +64,16 @@
             return idRegex.test(idNumber);
         }
 
+        // Validate email
+        function validateEmail(email) {
+            return email.includes('@') && email.length > 3;
+        }
+
         // ID number input validation
         const idInput = document.getElementById('idNumber');
         const idError = document.getElementById('idError');
+        const formError = document.getElementById('formError');
+        const formSuccess = document.getElementById('formSuccess');
         
         idInput.addEventListener('input', function(e) {
             const value = e.target.value;
@@ -81,11 +89,23 @@
             }
         });
 
+        // Email input validation
+        emailInput.addEventListener('input', function(e) {
+            const value = e.target.value.trim();
+            if (value.length > 0 && !validateEmail(value)) {
+                emailInput.classList.add('error');
+                emailError.classList.add('show');
+            } else {
+                emailInput.classList.remove('error');
+                emailError.classList.remove('show');
+            }
+        });
+
         document.getElementById('deviceIdForm').onsubmit = async function(e) {
             e.preventDefault();
             const idNumber = document.getElementById('idNumber').value.trim();
             const username = document.getElementById('username').value.trim();
-            const gmail = document.getElementById('gmail').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             
             // Validate ID number
@@ -96,18 +116,125 @@
                 return;
             }
             
-            if (!username || !gmail || !password) return;
-            
-            sessionStorage.setItem('wishboard_user', username);
-            sessionStorage.setItem('wishboard_id_number', idNumber);
-            sessionStorage.setItem('wishboard_gmail', gmail);
-            sessionStorage.setItem('wishboard_password', password);
-            sessionStorage.setItem('wishboard_device_id', getDeviceId());
-            window.location.href = 'wishboard.html';
+            if (!username || !gmail || !password) {
+                formError.textContent = 'Please fill in all fields';
+                formError.classList.add('show');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            try {
+                // Hash the password
+                const hashedPassword = await hashPassword(password);
+                
+                // Check if user already exists (by ID number or email)
+                const idQuery = query(usersRef, where('idNumber', '==', idNumber));
+                const emailQuery = query(usersRef, where('gmail', '==', gmail));
+                
+                const [idSnapshot, emailSnapshot] = await Promise.all([
+                    getDocs(idQuery),
+                    getDocs(emailQuery)
+                ]);
+
+                // Check if ID number is already registered
+                if (!idSnapshot.empty) {
+                    const userDoc = idSnapshot.docs[0];
+                    const userData = userDoc.data();
+                    
+                    // Verify password
+                    if (userData.password === hashedPassword) {
+                        // Login successful
+                        localStorage.setItem('wishboard_user', username);
+                        localStorage.setItem('wishboard_user_id', userDoc.id);
+                        localStorage.setItem('wishboard_id_number', idNumber);
+                        localStorage.setItem('wishboard_gmail', gmail);
+                        localStorage.setItem('wishboard_device_id', getDeviceId());
+                        
+                        // Update username if changed
+                        if (userData.username !== username) {
+                            await setDoc(doc(db, "users", userDoc.id), {
+                                ...userData,
+                                username: username
+                            }, { merge: true });
+                        }
+                        
+                        window.location.href = 'wishboard.html';
+                        return;
+                    } else {
+                        formError.textContent = 'Incorrect password';
+                        formError.classList.add('show');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Login / Register';
+                        return;
+                    }
+                }
+
+                // Check if email is already registered with different ID
+                if (!emailSnapshot.empty) {
+                    formError.textContent = 'This email is already registered with a different ID number';
+                    formError.classList.add('show');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login / Register';
+                    return;
+                }
+
+                // New user - register
+                const userDoc = {
+                    idNumber: idNumber,
+                    username: username,
+                    gmail: gmail,
+                    password: hashedPassword,
+                    createdAt: Date.now()
+                };
+
+                const docRef = await addDoc(usersRef, userDoc);
+                
+                // Save to localStorage
+                localStorage.setItem('wishboard_user', username);
+                localStorage.setItem('wishboard_user_id', docRef.id);
+                localStorage.setItem('wishboard_id_number', idNumber);
+                localStorage.setItem('wishboard_gmail', gmail);
+                localStorage.setItem('wishboard_device_id', getDeviceId());
+                
+                formSuccess.textContent = 'Registration successful! Redirecting...';
+                formSuccess.classList.add('show');
+                
+                setTimeout(() => {
+                    window.location.href = 'wishboard.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                formError.textContent = 'An error occurred. Please try again.';
+                formError.classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login / Register';
+            }
         };
+
+        function getDeviceId() {
+            const data = [
+                navigator.userAgent,
+                navigator.language,
+                screen.width,
+                screen.height,
+                screen.colorDepth,
+                navigator.platform,
+                navigator.hardwareConcurrency
+            ].join('|');
+            let hash = 0;
+            for (let i = 0; i < data.length; i++) {
+                hash = ((hash << 5) - hash) + data.charCodeAt(i);
+                hash |= 0;
+            }
+            return 'dev-' + Math.abs(hash);
+        }
         
-        // Auto-redirect if already identified (session only)
-        if (sessionStorage.getItem('wishboard_device_id') === getDeviceId()) {
+        // Auto-redirect if already logged in
+        if (localStorage.getItem('wishboard_user_id')) {
             window.location.href = 'wishboard.html';
         }
     </script>
