@@ -1,35 +1,4 @@
-// Depop-style price input: right-to-left entry
-const priceInput = document.getElementById('price');
-if (priceInput) {
-    let priceValue = '';
-    priceInput.addEventListener('keydown', function(e) {
-        // Allow navigation keys
-        if (["ArrowLeft","ArrowRight","Tab"].includes(e.key)) return;
-        // Prevent default for all but numbers and backspace
-        if (!/^[0-9]$/.test(e.key) && e.key !== 'Backspace') {
-            e.preventDefault();
-            return;
-        }
-        e.preventDefault();
-        if (/^[0-9]$/.test(e.key)) {
-            // Add digit to left
-            priceValue = priceValue + e.key;
-        } else if (e.key === 'Backspace') {
-            // Remove last digit
-            priceValue = priceValue.slice(0, -1);
-        }
-        // Format as cents
-        let num = priceValue ? parseInt(priceValue, 10) : 0;
-        let formatted = (num / 100).toFixed(2);
-        priceInput.value = formatted;
-    });
-    priceInput.addEventListener('focus', function() {
-        priceInput.select();
-    });
-    priceInput.addEventListener('blur', function() {
-        if (!priceInput.value) priceInput.value = '0.00';
-    });
-}
+<!-- ...existing HTML... -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -619,4 +588,38 @@ if (!userId && !userName) {
 }
 </script>
 </body>
+    <script>
+    // Depop-style price input: right-to-left entry
+    const priceInput = document.getElementById('price');
+    if (priceInput) {
+        let priceValue = '';
+        priceInput.addEventListener('keydown', function(e) {
+            // Allow navigation keys
+            if (["ArrowLeft","ArrowRight","Tab"].includes(e.key)) return;
+            // Prevent default for all but numbers and backspace
+            if (!/^[0-9]$/.test(e.key) && e.key !== 'Backspace') {
+                e.preventDefault();
+                return;
+            }
+            e.preventDefault();
+            if (/^[0-9]$/.test(e.key)) {
+                // Add digit to left
+                priceValue = priceValue + e.key;
+            } else if (e.key === 'Backspace') {
+                // Remove last digit
+                priceValue = priceValue.slice(0, -1);
+            }
+            // Format as cents
+            let num = priceValue ? parseInt(priceValue, 10) : 0;
+            let formatted = (num / 100).toFixed(2);
+            priceInput.value = formatted;
+        });
+        priceInput.addEventListener('focus', function() {
+            priceInput.select();
+        });
+        priceInput.addEventListener('blur', function() {
+            if (!priceInput.value) priceInput.value = '0.00';
+        });
+    }
+    </script>
 </html>
