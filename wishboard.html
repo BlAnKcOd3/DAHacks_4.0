@@ -43,6 +43,12 @@
         .listing-images { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
         .listing-images img { max-width: 150px; max-height: 150px; border-radius: 4px; object-fit: cover; cursor: pointer; }
         textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-family: Arial, sans-serif; resize: vertical; min-height: 60px; }
+        .edit-btn { background: #40916c; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 0.9em; margin-left: 8px; }
+        .edit-btn:hover { background: #2d6a4f; }
+        .currency-symbol { font-weight: bold; color: #2d6a4f; }
+        input[type="range"] { width: 100%; height: 8px; border-radius: 4px; background: #e0e0e0; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #2d6a4f; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #2d6a4f; cursor: pointer; border: none; }
     </style>
 </head>
 <body>
@@ -62,12 +68,23 @@
         </div>
         <form id="postForm">
             <input type="text" id="title" placeholder="Item Title" required maxlength="40">
-            <input type="number" id="price" placeholder="Price ($)" min="0" step="0.01">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="color: #2d6a4f; font-weight: bold;">USD ($)</span>
+                    <input type="text" id="price" placeholder="Enter price (e.g., 100 or 99.99)" pattern="[0-9]+(\.[0-9]{1,2})?" style="flex: 1; direction: rtl; text-align: right;">
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label for="priceSlider" style="min-width: 60px; color: #666;">Price:</label>
+                    <input type="range" id="priceSlider" min="0" max="10000" step="0.01" value="0" style="flex: 1;">
+                    <span id="priceDisplay" style="min-width: 80px; text-align: right; color: #2d6a4f; font-weight: bold;">$0.00</span>
+                </div>
+            </div>
             <div class="negotiable-option">
                 <input type="checkbox" id="negotiable" name="negotiable">
                 <label for="negotiable">Price is negotiable / Open to offers</label>
             </div>
-            <select id="category">
+            <select id="category" required>
+                <option value="">Please choose one of the categories below</option>
                 <option value="Books">Books</option>
                 <option value="Electronics">Electronics</option>
                 <option value="Furniture">Furniture</option>
@@ -79,8 +96,9 @@
                 <input type="file" id="images" accept="image/*" multiple>
                 <div class="image-preview-container" id="imagePreview"></div>
             </div>
-            <input type="text" id="contact" placeholder="Contact Info (optional)" maxlength="40">
-            <button type="submit">Post Item</button>
+            <input type="text" id="contact" placeholder="Contact Info" required maxlength="40">
+            <input type="hidden" id="editListingId" value="">
+            <button type="submit" id="submitBtn">Post Item</button>
         </form>
         <div class="filters">
             <button onclick="filterPosts('All')">All</button>
@@ -154,8 +172,34 @@ window.removeImage = function(index) {
     }
 };
 
+// Price slider and input synchronization
+const priceInput = document.getElementById('price');
+const priceSlider = document.getElementById('priceSlider');
+const priceDisplay = document.getElementById('priceDisplay');
+
+if (priceInput && priceSlider && priceDisplay) {
+    // Update slider and display when input changes
+    priceInput.addEventListener('input', function(e) {
+        const value = parseFloat(e.target.value) || 0;
+        if (value >= 0 && value <= 10000) {
+            priceSlider.value = value;
+            priceDisplay.textContent = '$' + value.toFixed(2);
+        }
+    });
+    
+    // Update input and display when slider changes
+    priceSlider.addEventListener('input', function(e) {
+        const value = parseFloat(e.target.value);
+        priceInput.value = value.toFixed(2);
+        priceDisplay.textContent = '$' + value.toFixed(2);
+    });
+    
+    // Initialize display
+    priceDisplay.textContent = '$0.00';
+}
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCO-w3HsDbLVbEk_J7qYEMkrpgUC_CWn54",
@@ -230,20 +274,51 @@ document.getElementById('deleteDataBtn').onclick = function() {
     }
 };
 let currentFilter = 'All';
+// Currency symbols mapping
+const currencySymbols = {
+    'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'CNY': '¥', 'INR': '₹', 'AUD': 'A$', 'CAD': 'C$',
+    'CHF': 'Fr', 'HKD': 'HK$', 'SGD': 'S$', 'NZD': 'NZ$', 'KRW': '₩', 'MXN': '$', 'BRL': 'R$',
+    'ZAR': 'R', 'RUB': '₽', 'TRY': '₺', 'SEK': 'kr', 'NOK': 'kr', 'DKK': 'kr', 'PLN': 'zł',
+    'THB': '฿', 'IDR': 'Rp', 'MYR': 'RM', 'PHP': '₱', 'VND': '₫', 'AED': 'د.إ', 'SAR': '﷼',
+    'ILS': '₪', 'EGP': 'E£', 'NGN': '₦', 'ARS': '$', 'CLP': '$', 'COP': '$', 'PEN': 'S/',
+    'CZK': 'Kč', 'HUF': 'Ft', 'RON': 'lei', 'BGN': 'лв', 'HRK': 'kn', 'UAH': '₴', 'PKR': '₨',
+    'BDT': '৳', 'LKR': '₨', 'NPR': '₨', 'MMK': 'K', 'KZT': '₸', 'UZS': 'лв', 'KWD': 'د.ك',
+    'QAR': '﷼', 'OMR': '﷼', 'BHD': '.د.ب', 'JOD': 'د.ا', 'LBP': 'ل.ل', 'ISK': 'kr', 'RSD': 'Дин.',
+    'BAM': 'КМ', 'MKD': 'ден', 'ALL': 'L', 'MDL': 'L', 'GEL': '₾', 'AMD': '֏', 'AZN': '₼',
+    'BYN': 'Br', 'TJS': 'ЅМ', 'TMT': 'm', 'UYU': '$U', 'PYG': 'Gs', 'BOB': 'Bs.', 'GTQ': 'Q',
+    'HNL': 'L', 'NIO': 'C$', 'CRC': '₡', 'PAB': 'B/.', 'DOP': 'RD$', 'JMD': 'J$', 'BBD': 'Bds$',
+    'BZD': 'BZ$', 'BMD': 'BD$', 'BSD': 'B$', 'XCD': '$', 'AWG': 'ƒ', 'ANG': 'ƒ', 'TTD': 'TT$',
+    'GYD': 'G$', 'SRD': '$', 'FJD': 'FJ$', 'PGK': 'K', 'SBD': 'SI$', 'VUV': 'Vt', 'WST': 'WS$',
+    'TOP': 'T$', 'XPF': '₣', 'MOP': 'P', 'TWD': 'NT$', 'KHR': '៛', 'LAK': '₭', 'BND': 'B$',
+    'AFN': '؋', 'IRR': '﷼', 'IQD': 'ع.د', 'YER': '﷼', 'SYP': '£', 'ETB': 'Br', 'KES': 'KSh',
+    'UGX': 'USh', 'TZS': 'TSh', 'RWF': 'RF', 'BIF': 'FBu', 'DJF': 'Fdj', 'SOS': 'S', 'ERN': 'Nfk',
+    'SDG': 'ج.س', 'SSP': '£', 'MZN': 'MT', 'AOA': 'Kz', 'ZMW': 'ZK', 'MWK': 'MK', 'MGA': 'Ar',
+    'MUR': '₨', 'SCR': '₨', 'KMF': 'CF', 'CDF': 'FC', 'XAF': 'FCFA', 'XOF': 'CFA', 'GHS': '₵',
+    'GMD': 'D', 'GNF': 'FG', 'SLL': 'Le', 'LRD': 'L$', 'CVE': '$', 'STN': 'Db', 'GIP': '£',
+    'FKP': '£', 'SHP': '£', 'IMP': '£', 'JEP': '£', 'GGP': '£', 'BWP': 'P', 'SZL': 'L',
+    'LSL': 'L', 'NAD': 'N$', 'MAD': 'د.م.', 'DZD': 'د.ج', 'TND': 'د.ت', 'LYD': 'ل.د',
+    'XDR': 'SDR', 'BTC': '₿', 'ETH': 'Ξ'
+};
+
 function renderBoard(posts) {
     const board = document.getElementById('board');
     board.innerHTML = '';
     let filtered = posts;
     if (currentFilter !== 'All') filtered = posts.filter(p => p.category === currentFilter);
+    const currentUser = localStorage.getItem('wishboard_user') || '(unknown)';
+    
     filtered.forEach((post, idx) => {
         const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
         const safeTitle = escapeHTML(post.title || 'Untitled');
         const safeDesc = escapeHTML(post.desc || '');
         const safeCategory = escapeHTML(post.category || 'Other');
-        const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
+        const safePrice = post.price !== undefined && post.price !== '' 
+            ? `$${escapeHTML(post.price)}` 
+            : 'N/A';
         const safeContact = escapeHTML(post.contact || '');
         const negotiable = post.negotiable || false;
         const images = post.images || [];
+        const isOwner = safeUser === currentUser;
         
         const li = document.createElement('li');
         li.innerHTML = `
@@ -253,6 +328,7 @@ function renderBoard(posts) {
             <div><strong>Price:</strong> ${safePrice}${negotiable ? '<span class="negotiable-badge">Negotiable</span>' : ''}</div>
             <div><strong>Seller:</strong> ${safeUser}</div>
         `;
+        
         if (safeContact) {
             const btn = document.createElement('button');
             btn.className = 'contact';
@@ -262,15 +338,70 @@ function renderBoard(posts) {
             });
             li.appendChild(btn);
         }
+        
+        // Add edit button for owner
+        if (isOwner && post.id) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'edit-btn';
+            editBtn.textContent = 'Edit Listing';
+            editBtn.addEventListener('click', function() {
+                editListing(post.id);
+            });
+            li.appendChild(editBtn);
+        }
+        
         board.appendChild(li);
     });
+}
+
+async function editListing(listingId) {
+    try {
+        const docRef = doc(db, "listings", listingId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Populate form
+            document.getElementById('title').value = data.title || '';
+            const priceValue = parseFloat(data.price) || 0;
+            document.getElementById('price').value = priceValue.toFixed(2);
+            if (priceSlider) {
+                priceSlider.value = priceValue;
+                priceDisplay.textContent = '$' + priceValue.toFixed(2);
+            }
+            document.getElementById('category').value = data.category || '';
+            document.getElementById('desc').value = data.desc || '';
+            document.getElementById('contact').value = data.contact || '';
+            document.getElementById('negotiable').checked = data.negotiable || false;
+            document.getElementById('editListingId').value = listingId;
+            
+            // Handle images
+            selectedImages = [];
+            if (data.images && data.images.length > 0) {
+                data.images.forEach(imgData => {
+                    selectedImages.push({ file: null, data: imgData });
+                });
+            }
+            updateImagePreview();
+            
+            // Change button text
+            document.getElementById('submitBtn').textContent = 'Update Listing';
+            
+            // Scroll to form
+            document.getElementById('postForm').scrollIntoView({ behavior: 'smooth' });
+        }
+    } catch (error) {
+        console.error('Error loading listing:', error);
+        alert('Error loading listing. Please try again.');
+    }
 }
 // Listen for Firestore changes
 const q = query(listingsRef, orderBy("created", "desc"));
 onSnapshot(q, (snapshot) => {
     const posts = [];
-    snapshot.forEach(doc => {
-        posts.push(doc.data());
+    snapshot.forEach(docSnap => {
+        posts.push({ ...docSnap.data(), id: docSnap.id });
     });
     renderBoard(posts);
 });
@@ -282,27 +413,59 @@ document.getElementById('postForm').onsubmit = async function(e) {
     const desc = document.getElementById('desc').value.trim();
     const contact = document.getElementById('contact').value.trim();
     const negotiable = document.getElementById('negotiable').checked;
+    const editListingId = document.getElementById('editListingId').value;
     
-    if (!title || !desc) return;
+    if (!title || !desc || !contact) {
+        alert('Please fill in all required fields (Title, Description, and Contact Info)');
+        return;
+    }
+    
+    // Validate category is selected
+    if (!category || category === '') {
+        alert('Please choose one of the categories below');
+        return;
+    }
+    
+    // Validate price format
+    if (price && !/^[0-9]+(\.[0-9]{1,2})?$/.test(price)) {
+        alert('Please enter a valid price (e.g., 100 or 99.99)');
+        return;
+    }
     
     // Convert images to base64 array
     const images = selectedImages.map(img => img.data);
     
     const user = localStorage.getItem('wishboard_user') || '(unknown)';
-    await addDoc(listingsRef, {
-        title, price, category, desc, contact, user, negotiable, images,
+    const listingData = {
+        title, price, currency: 'USD', category, desc, contact, user, negotiable, images,
         created: Date.now()
-    });
+    };
+    
+    if (editListingId) {
+        // Update existing listing
+        const docRef = doc(db, "listings", editListingId);
+        await updateDoc(docRef, listingData);
+    } else {
+        // Create new listing
+        await addDoc(listingsRef, listingData);
+    }
     
     // Reset form
     document.getElementById('title').value = '';
     document.getElementById('price').value = '';
+    if (priceSlider) {
+        priceSlider.value = 0;
+        priceDisplay.textContent = '$0.00';
+    }
+    document.getElementById('category').value = '';
     document.getElementById('desc').value = '';
     document.getElementById('contact').value = '';
     document.getElementById('negotiable').checked = false;
+    document.getElementById('editListingId').value = '';
+    document.getElementById('submitBtn').textContent = 'Post Item';
     selectedImages = [];
-    imagePreview.innerHTML = '';
-    imageInput.value = '';
+    if (imagePreview) imagePreview.innerHTML = '';
+    if (imageInput) imageInput.value = '';
 };
 window.filterPosts = function(type) {
     currentFilter = type;
