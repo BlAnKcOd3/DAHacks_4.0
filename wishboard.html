@@ -1,3 +1,35 @@
+// Depop-style price input: right-to-left entry
+const priceInput = document.getElementById('price');
+if (priceInput) {
+    let priceValue = '';
+    priceInput.addEventListener('keydown', function(e) {
+        // Allow navigation keys
+        if (["ArrowLeft","ArrowRight","Tab"].includes(e.key)) return;
+        // Prevent default for all but numbers and backspace
+        if (!/^[0-9]$/.test(e.key) && e.key !== 'Backspace') {
+            e.preventDefault();
+            return;
+        }
+        e.preventDefault();
+        if (/^[0-9]$/.test(e.key)) {
+            // Add digit to left
+            priceValue = priceValue + e.key;
+        } else if (e.key === 'Backspace') {
+            // Remove last digit
+            priceValue = priceValue.slice(0, -1);
+        }
+        // Format as cents
+        let num = priceValue ? parseInt(priceValue, 10) : 0;
+        let formatted = (num / 100).toFixed(2);
+        priceInput.value = formatted;
+    });
+    priceInput.addEventListener('focus', function() {
+        priceInput.select();
+    });
+    priceInput.addEventListener('blur', function() {
+        if (!priceInput.value) priceInput.value = '0.00';
+    });
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,16 +112,73 @@
                 <input type="password" id="reenterPassword" placeholder="Re-enter password" maxlength="40" style="margin-bottom:8px;">
             </div>
             <!-- Password Section End -->
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <span style="color: #2d6a4f; font-weight: bold;">USD ($)</span>
-                    <input type="text" id="price" placeholder="Enter price (e.g., 100 or 99.99)" pattern="[0-9]+(\.[0-9]{1,2})?" style="flex: 1; direction: rtl; text-align: right;">
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom:8px;">
+                <span style="color: #2d6a4f; font-weight: bold; font-size:1.1em; user-select:none;">$</span>
+                <div style="flex:1; position:relative;">
+                    <input type="text" id="price" style="width:100%; text-align: right; background: #f7f7f7; position:relative; z-index:2; color:transparent; caret-color:#2d6a4f;" autocomplete="off" maxlength="5">
+                    <span id="pricePlaceholder" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#888; font-size:1em; pointer-events:none; z-index:1; font-family:inherit;">0.00</span>
+                    <span id="priceOverlay" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#2d6a4f; font-size:1em; pointer-events:none; z-index:3; font-family:inherit;"></span>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <label for="priceSlider" style="min-width: 60px; color: #666;">Price:</label>
-                    <input type="range" id="priceSlider" min="0" max="10000" step="0.01" value="0" style="flex: 1;">
-                    <span id="priceDisplay" style="min-width: 80px; text-align: right; color: #2d6a4f; font-weight: bold;">$0.00</span>
-                </div>
+            // Depop-style price input with left-aligned disappearing placeholder
+            const priceInput = document.getElementById('price');
+            const pricePlaceholder = document.getElementById('pricePlaceholder');
+            const priceOverlay = document.getElementById('priceOverlay');
+            if (priceInput && pricePlaceholder && priceOverlay) {
+                let priceValue = '';
+                function updatePriceDisplay() {
+                    // Format as cents
+                    let num = priceValue ? parseInt(priceValue, 10) : 0;
+                    let formatted = (num / 100).toFixed(2);
+                    // Overlay entered digits on top of placeholder
+                    let entered = formatted;
+                    let placeholder = '0.00';
+                    let result = '';
+                    let enteredArr = entered.split('');
+                    let placeholderArr = placeholder.split('');
+                    // Hide placeholder digits from right as user types
+                    let hideCount = priceValue.length;
+                    for (let i = 0; i < placeholderArr.length; i++) {
+                        if (i >= placeholderArr.length - hideCount) {
+                            result += '<span style="color:transparent;">' + placeholderArr[i] + '</span>';
+                        } else {
+                            result += placeholderArr[i];
+                        }
+                    }
+                    pricePlaceholder.innerHTML = result;
+                    priceOverlay.textContent = entered;
+                    priceInput.value = entered;
+                                // Ensure input field never contains HTML
+                                if (priceInput.value.includes('<')) {
+                                    priceInput.value = entered.replace(/<[^>]*>/g, '');
+                                }
+                }
+                priceInput.addEventListener('keydown', function(e) {
+                    // Allow navigation keys
+                    if (["ArrowLeft","ArrowRight","Tab"].includes(e.key)) return;
+                    // Prevent default for all but numbers and backspace
+                    if (!/^[0-9]$/.test(e.key) && e.key !== 'Backspace') {
+                        e.preventDefault();
+                        return;
+                    }
+                    e.preventDefault();
+                    if (/^[0-9]$/.test(e.key)) {
+                        // Add digit to left
+                        if (priceValue.length < 5) priceValue = priceValue + e.key;
+                    } else if (e.key === 'Backspace') {
+                        // Remove last digit
+                        priceValue = priceValue.slice(0, -1);
+                    }
+                    updatePriceDisplay();
+                });
+                priceInput.addEventListener('focus', function() {
+                    priceInput.select();
+                });
+                priceInput.addEventListener('blur', function() {
+                    if (!priceValue) priceValue = '';
+                    updatePriceDisplay();
+                });
+                updatePriceDisplay();
+            }
             </div>
             <div class="negotiable-option">
                 <input type="checkbox" id="negotiable" name="negotiable">
@@ -127,10 +216,14 @@
 // Password re-entry logic
 const confirmPasswordInput = document.getElementById('confirmPassword');
 const reenterSection = document.getElementById('reenterPasswordSection');
+let reenterShown = false;
 if (confirmPasswordInput && reenterSection) {
     function showReenter() {
-        reenterSection.style.display = 'flex';
-        document.getElementById('reenterPassword').focus();
+        if (!reenterShown) {
+            reenterSection.style.display = 'flex';
+            document.getElementById('reenterPassword').focus();
+            reenterShown = true;
+        }
     }
     confirmPasswordInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -205,31 +298,7 @@ window.removeImage = function(index) {
     }
 };
 
-// Price slider and input synchronization
-const priceInput = document.getElementById('price');
-const priceSlider = document.getElementById('priceSlider');
-const priceDisplay = document.getElementById('priceDisplay');
-
-if (priceInput && priceSlider && priceDisplay) {
-    // Update slider and display when input changes
-    priceInput.addEventListener('input', function(e) {
-        const value = parseFloat(e.target.value) || 0;
-        if (value >= 0 && value <= 10000) {
-            priceSlider.value = value;
-            priceDisplay.textContent = '$' + value.toFixed(2);
-        }
-    });
-    
-    // Update input and display when slider changes
-    priceSlider.addEventListener('input', function(e) {
-        const value = parseFloat(e.target.value);
-        priceInput.value = value.toFixed(2);
-        priceDisplay.textContent = '$' + value.toFixed(2);
-    });
-    
-    // Initialize display
-    priceDisplay.textContent = '$0.00';
-}
+// ...removed price slider logic...
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, where, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
@@ -345,8 +414,15 @@ function renderBoard(posts) {
         const safeTitle = escapeHTML(post.title || 'Untitled');
         const safeDesc = escapeHTML(post.desc || '');
         const safeCategory = escapeHTML(post.category || 'Other');
-        const safePrice = post.price !== undefined && post.price !== '' 
-            ? `$${escapeHTML(post.price)}` 
+        // Only show formatted price, never overlay HTML
+        let displayPrice = post.price;
+        if (typeof displayPrice === 'string') {
+            displayPrice = displayPrice.replace(/[^0-9.]/g, '');
+            if (displayPrice === '') displayPrice = '0.00';
+            else displayPrice = parseFloat(displayPrice).toFixed(2);
+        }
+        const safePrice = displayPrice !== undefined && displayPrice !== '' 
+            ? `$${escapeHTML(displayPrice)}` 
             : 'N/A';
         const safeContact = escapeHTML(post.contact || '');
         const negotiable = post.negotiable || false;
@@ -441,7 +517,11 @@ onSnapshot(q, (snapshot) => {
 document.getElementById('postForm').onsubmit = async function(e) {
     e.preventDefault();
     const title = document.getElementById('title').value.trim();
-    const price = document.getElementById('price').value.trim();
+    // Only save formatted price value
+    let priceRaw = document.getElementById('price').value.trim();
+    let price = priceRaw.replace(/[^0-9.]/g, '');
+    if (price === '') price = '0.00';
+    else price = parseFloat(price).toFixed(2);
     const category = document.getElementById('category').value;
     const desc = document.getElementById('desc').value.trim();
     const contact = document.getElementById('contact').value.trim();
