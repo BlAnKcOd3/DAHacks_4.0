@@ -2,36 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Community Wishboard</title>
+    <title>De Anza Marketplace</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
         .container { max-width: 500px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; }
         h1 { text-align: center; color: #2d6a4f; }
         .warn { color: #d90429; font-size:1em; font-weight:bold; margin-bottom:12px; text-align:center; }
-        .leaderboard { margin-bottom:18px; text-align:center; }
         .userbar { margin-bottom:12px; text-align:center; }
         .userbar span { color:#2d6a4f; font-weight:bold; }
         .userbar button { margin-left:8px; background:#ffd166; color:#2d6a4f; border:none; border-radius:4px; padding:4px 10px; cursor:pointer; font-size:0.95em; }
         .actions { margin-bottom:12px; text-align:center; }
         .actions button { background:#e63946; color:#fff; border:none; border-radius:4px; padding:4px 12px; cursor:pointer; font-size:0.95em; margin-right:8px; }
         .actions .delete { background:#6c757d; }
-        form { display: flex; gap: 8px; margin-bottom: 18px; }
-        select, input[type="text"] { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+        select, input[type="text"], input[type="number"] { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        input[type="number"] { max-width: 100px; }
         button[type="submit"] { background: #2d6a4f; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; }
         button[type="submit"]:hover { background: #40916c; }
         .filters { margin-bottom: 16px; text-align: center; }
         .filters button { background: #b7e4c7; color: #2d6a4f; margin: 0 4px; }
         ul { list-style: none; padding: 0; }
-        li { background: #e9ecef; margin-bottom: 12px; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        li { background: #e9ecef; margin-bottom: 12px; padding: 12px; border-radius: 6px; display: flex; flex-direction: column; align-items: flex-start; }
+        .listing-header { font-size: 1.1em; font-weight: bold; color: #2d6a4f; margin-bottom: 4px; }
+        .listing-details { margin-bottom: 6px; }
         .tag { background: #ffd166; color: #6c757d; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
-        .helper { background: #06d6a0; color: #fff; }
+        .category { background: #b7e4c7; color: #2d6a4f; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
+        .contact { background: #06d6a0; color: #fff; border-radius: 4px; padding: 2px 8px; margin-left: 8px; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Community Wishboard</h1>
+        <h1>De Anza Marketplace</h1>
         <div class="warn">⚠️ This is NOT a secure login! Your name is only saved for this browser/device. Anyone using or modifying this device can access or impersonate your posts. Do NOT use for sensitive information.</div>
-        <div class="leaderboard" id="leaderboard"></div>
         <div class="actions">
             <button id="logoutBtn">Log Out</button>
             <button id="deleteDataBtn" class="delete">Delete All Data</button>
@@ -41,17 +43,26 @@
             <button id="changeUserBtn">Change Name</button>
         </div>
         <form id="postForm">
-            <select id="type">
-                <option value="Need">Need</option>
-                <option value="Offer">Offer</option>
+            <input type="text" id="title" placeholder="Item Title" required maxlength="40">
+            <input type="number" id="price" placeholder="Price ($)" min="0" step="0.01">
+            <select id="category">
+                <option value="Books">Books</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Furniture">Furniture</option>
+                <option value="Services">Services</option>
+                <option value="Other">Other</option>
             </select>
-            <input type="text" id="desc" placeholder="Describe what you're offering or looking for" required maxlength="80">
-            <button type="submit">Post</button>
+            <input type="text" id="desc" placeholder="Description" required maxlength="80">
+            <input type="text" id="contact" placeholder="Contact Info (optional)" maxlength="40">
+            <button type="submit">Post Item</button>
         </form>
         <div class="filters">
             <button onclick="filterPosts('All')">All</button>
-            <button onclick="filterPosts('Need')">Needs</button>
-            <button onclick="filterPosts('Offer')">Offers</button>
+            <button onclick="filterPosts('Books')">Books</button>
+            <button onclick="filterPosts('Electronics')">Electronics</button>
+            <button onclick="filterPosts('Furniture')">Furniture</button>
+            <button onclick="filterPosts('Services')">Services</button>
+            <button onclick="filterPosts('Other')">Other</button>
         </div>
         <ul id="board"></ul>
     </div>
@@ -118,65 +129,46 @@
             const board = document.getElementById('board');
             board.innerHTML = '';
             let posts = getPosts();
-            if (currentFilter !== 'All') posts = posts.filter(p => p.type === currentFilter);
-            updateLeaderboardDisplay(posts);
+            if (currentFilter !== 'All') posts = posts.filter(p => p.category === currentFilter);
             posts.forEach((post, idx) => {
                 const li = document.createElement('li');
                 const safeUser = escapeHTML(post.user ? post.user : '(unknown)');
-                const safeHelper = post.helperName ? escapeHTML(post.helperName) : '';
+                const safeTitle = escapeHTML(post.title || 'Untitled');
+                const safeDesc = escapeHTML(post.desc || '');
+                const safeCategory = escapeHTML(post.category || 'Other');
+                const safePrice = post.price !== undefined && post.price !== '' ? `$${escapeHTML(post.price)}` : 'N/A';
+                const safeContact = escapeHTML(post.contact || '');
                 li.innerHTML = `
-                    <span>
-                        <strong>${escapeHTML(post.type)}:</strong> ${escapeHTML(post.desc)}
-                        <span style="color:#40916c; font-size:0.95em; margin-left:8px;">by ${safeUser}</span>
-                        ${post.helper ? `<span class=\"tag helper\">Helper Found! (${safeHelper})</span>` : ''}
-                    </span>
-                    ${!post.helper ? `<button onclick=\"markHelp(${idx})\">I can help</button>` : ''}
+                    <div class="listing-header">${safeTitle} <span class="category">${safeCategory}</span></div>
+                    <div class="listing-details">${safeDesc}</div>
+                    <div><strong>Price:</strong> ${safePrice}</div>
+                    <div><strong>Seller:</strong> ${safeUser}</div>
+                    ${safeContact ? `<button onclick=\"showContact('${safeContact}')\" class=\"contact\">Contact Seller</button>` : ''}
                 `;
                 board.appendChild(li);
             });
         }
-        // Leaderboard rendering separated for clarity and maintainability
-        function updateLeaderboardDisplay(posts) {
-            const helperCounts = {};
-            posts.forEach(post => {
-                if (post.helper && post.helperName) {
-                    helperCounts[post.helperName] = (helperCounts[post.helperName] || 0) + 1;
-                }
-            });
-            const leaderboardDiv = document.getElementById('leaderboard');
-            if (Object.keys(helperCounts).length > 0) {
-                const sortedHelpers = Object.entries(helperCounts).sort((a, b) => b[1] - a[1]);
-                let html = '<strong>Top Helpers:</strong><br>';
-                sortedHelpers.forEach(([name, count], i) => {
-                    html += `${i+1}. <span style="color:#06d6a0; font-weight:bold;">${escapeHTML(name)}</span> <span style="color:#6c757d;">(${count} helped)</span><br>`;
-                });
-                leaderboardDiv.innerHTML = html;
-            } else {
-                leaderboardDiv.innerHTML = '<em>No helpers yet.</em>';
-            }
-        }
+        window.showContact = function(contact) {
+            alert('Contact Info: ' + contact);
+        };
         // Add Post
         document.getElementById('postForm').onsubmit = function(e) {
             e.preventDefault();
-            const type = document.getElementById('type').value;
+            const title = document.getElementById('title').value.trim();
+            const price = document.getElementById('price').value.trim();
+            const category = document.getElementById('category').value;
             const desc = document.getElementById('desc').value.trim();
-            if (!desc) return;
+            const contact = document.getElementById('contact').value.trim();
+            if (!title || !desc) return;
             const user = localStorage.getItem('wishboard_user') || '(unknown)';
             const posts = getPosts();
-            posts.unshift({ type, desc, user, helper: false });
+            posts.unshift({ title, price, category, desc, contact, user });
             savePosts(posts);
+            document.getElementById('title').value = '';
+            document.getElementById('price').value = '';
             document.getElementById('desc').value = '';
+            document.getElementById('contact').value = '';
             renderBoard();
-        };
-        // Mark as Helped
-        window.markHelp = function(idx) {
-            const posts = getPosts();
-            const helperName = localStorage.getItem('wishboard_user') || '(unknown)';
-            posts[idx].helper = true;
-            posts[idx].helperName = helperName;
-            savePosts(posts);
-            renderBoard();
-            alert('Thanks for helping! Reach out locally.');
         };
         // Filter
         window.filterPosts = function(type) {

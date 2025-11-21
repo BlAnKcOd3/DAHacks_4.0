@@ -4,10 +4,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Community Wishboard</title>
+    <title>Community Wishboard - Home</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; text-align: center; }
+        h1 { color: #2d6a4f; margin-bottom: 16px; }
+        p { color: #333; margin-bottom: 24px; }
+        .nav-btn { display: inline-block; margin: 8px 12px; padding: 12px 32px; background: #2d6a4f; color: #fff; border: none; border-radius: 6px; font-size: 1.1em; cursor: pointer; text-decoration: none; }
+        .nav-btn:hover { background: #40916c; }
+        .warn { color: #d90429; font-size:1em; font-weight:bold; margin-top:18px; }
+    </style>
 </head>
 <body>
-    <h1>Community Wishboard</h1>
-    <p>This file is now deprecated. Please use <a href="login.html">login.html</a> and <a href="wishboard.html">wishboard.html</a> for the app.</p>
+    <div class="container">
+        <h1>De Anza Marketplace</h1>
+        <p>Welcome to the De Anza Marketplace!<br>
+        Buy, sell, and offer services with other De Anza students.<br>
+        All listings and your identity are stored locally in your browser for privacy and simplicity.</p>
+        <a href="login.html" class="nav-btn">Login / Change Name</a>
+        <a href="wishboard.html" class="nav-btn">Go to Marketplace</a>
+        <div class="warn">⚠️ This app is for local, anonymous use only. No sensitive data. Your listings and identity are only saved on this device.</div>
+    </div>
 </body>
 </html>
